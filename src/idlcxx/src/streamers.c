@@ -658,8 +658,6 @@ generate_entity_properties(
   const char *addto,
   uint32_t member_id)
 {
-  const idl_node_t *nd = ((const idl_node_t*)type_spec)->parent;
-
   if (idl_is_struct(type_spec)
    || idl_is_union(type_spec)) {
     char *type = NULL;
@@ -676,7 +674,7 @@ generate_entity_properties(
       return IDL_RETCODE_NO_MEMORY;
   }
 
-  const char *opt = (idl_is_member(nd) && ((const idl_member_t*)nd)->optional.value) ? "true" : "false";
+  const char *opt = is_optional(type_spec) ? "true" : "false";
   if (putf(&streams->props, "(%1$"PRIu32",%2$s)%3$s;\n",
       member_id,
       opt,
@@ -774,7 +772,6 @@ generate_entity_properties(
 
 static idl_retcode_t
 add_member_start(
-  const idl_member_t *mem,
   const idl_declarator_t *decl,
   struct streams *streams)
 {
@@ -795,7 +792,7 @@ add_member_start(
   if (multi_putf(streams, ALL, "      streamer.start_member(prop, cdr_stream::stream_mode::{T}, "))
     return IDL_RETCODE_NO_MEMORY;
 
-  if (mem->optional.value) {
+  if (is_optional(decl)) {
     if (multi_putf(streams, ALL, "%1$s.has_value());\n", accessor)
      || multi_putf(streams, (WRITE|MOVE), "      if (%1$s.has_value()) {\n", accessor)
      || putf(&streams->read, "      %1$s = %2$s();\n", accessor, type))
@@ -810,11 +807,10 @@ add_member_start(
 
 static idl_retcode_t
 add_member_finish(
-  const idl_member_t *mem,
   const idl_declarator_t *decl,
   struct streams *streams)
 {
-  if (mem->optional.value) {
+  if (is_optional(decl)) {
     instance_location_t loc = {.parent = "instance"};
     char *accessor = NULL;
     if (IDL_PRINTA(&accessor, get_instance_accessor, decl, &loc) < 0
@@ -855,11 +851,11 @@ process_member(
 
 
     if (multi_putf(streams, ALL, fmt, declarator->id.value)
-     || add_member_start(mem, declarator, streams))
+     || add_member_start(declarator, streams))
       return IDL_RETCODE_NO_MEMORY;
 
     instance_location_t loc = {.parent = "instance"};
-    if (mem->optional.value)
+    if (is_optional(mem))
       loc.type |= OPTIONAL;
 
     if (generate_entity_properties(mem->node.parent, type_spec, streams, "props.m_members_by_seq", declarator->id.value))
@@ -872,7 +868,7 @@ process_member(
       return IDL_RETCODE_NO_MEMORY;
 
     if (process_entity(pstate, streams, declarator, type_spec, loc)
-     || add_member_finish(mem, declarator, streams))
+     || add_member_finish(declarator, streams))
       return IDL_RETCODE_NO_MEMORY;
   }
 

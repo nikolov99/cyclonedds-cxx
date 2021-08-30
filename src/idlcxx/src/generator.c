@@ -475,19 +475,13 @@ int get_cpp11_value(
 bool is_optional(
   const void *node)
 {
-  const idl_node_t *nd = node;
-  const idl_annotation_appl_t *appl = NULL;
-  IDL_FOREACH(appl, nd->annotations) {
-    if (strcmp(appl->annotation->name->identifier, "optional") == 0) {
-      if (appl->parameters
-       && appl->parameters->const_expr
-       && idl_mask(appl->parameters->const_expr) == (IDL_LITERAL | IDL_BOOL)) {
-        const idl_literal_t *lit = appl->parameters->const_expr;
-        return lit->value.bln;
-      }
-      return true;
-    }
+  if (idl_is_member(node)) {
+    return ((const idl_member_t *)node)->optional.value;
+  } else if (idl_is_declarator(node)
+          || idl_is_type_spec(node)) {
+    return is_optional(idl_parent(node));
   }
+
   return false;
 }
 
@@ -585,7 +579,7 @@ register_optional(
 
   struct generator *gen = user_data;
 
-  if (idl_is_member(node) && ((const idl_member_t*)node)->optional.value)
+  if (is_optional(node))
     gen->uses_optional = true;
 
   return IDL_RETCODE_OK;
