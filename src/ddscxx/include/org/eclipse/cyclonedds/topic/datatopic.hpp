@@ -43,7 +43,6 @@ using org::eclipse::cyclonedds::core::cdr::basic_cdr_stream;
 template<class streamer, typename T>
 bool to_key(streamer& str, const T& tokey, ddsi_keyhash_t& hash)
 {
-  str.reset_position();
   move(str, tokey, true);
   size_t sz = str.position();
   size_t padding = 16 - sz % 16;
@@ -389,7 +388,6 @@ ddsi_serdata *serdata_from_sample(
   if (str.abort_status())
     goto failure;
 
-  str.reset_position();
   d->key_md5_hashed() = to_key(str, msg, d->key());
   d->setT(&msg);
   d->populate_hash();

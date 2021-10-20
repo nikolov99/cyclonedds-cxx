@@ -31,9 +31,9 @@ const uint32_t xcdr_v2_stream::lc_mask         = uint32_t(0x70000000);
 const uint32_t xcdr_v2_stream::id_mask         = uint32_t(0x0FFFFFFF);
 const uint32_t xcdr_v2_stream::must_understand = uint32_t(0x80000000);
 
-void xcdr_v2_stream::start_member(entity_properties_t &prop, stream_mode mode, bool present)
+void xcdr_v2_stream::start_member(entity_properties_t &prop, bool present)
 {
-  switch (mode) {
+  switch (m_mode) {
     case stream_mode::write:
       if (em_header_necessary(prop)) {
         if (present)
@@ -56,9 +56,9 @@ void xcdr_v2_stream::start_member(entity_properties_t &prop, stream_mode mode, b
   }
 }
 
-void xcdr_v2_stream::finish_member(entity_properties_t &prop, stream_mode mode, bool present)
+void xcdr_v2_stream::finish_member(entity_properties_t &prop, bool present)
 {
-  if (mode == stream_mode::write) {
+  if (m_mode == stream_mode::write) {
     prop.e_sz = static_cast<uint32_t>(position()-prop.e_off);
     if (em_header_necessary(prop)) {
       if (present)
@@ -94,27 +94,27 @@ bool xcdr_v2_stream::bytes_available(const entity_properties_t &props)
   return true;
 }
 
-entity_properties_t& xcdr_v2_stream::next_entity(entity_properties_t &props, bool as_key, stream_mode mode, bool &firstcall)
+entity_properties_t& xcdr_v2_stream::next_entity(entity_properties_t &props, bool &firstcall)
 {
   member_list_type ml = member_list_type::member_by_seq;
-  if (as_key) {
+  if (m_key) {
     if (props.keylist_is_pragma)
       ml = member_list_type::key_by_seq;
     else
       ml = member_list_type::key_by_id;
   }
 
-  if (mode != stream_mode::read)
+  if (m_mode != stream_mode::read)
     return next_prop(props, ml, firstcall);
 
-  if (!list_necessary(props, as_key)) {
+  if (!list_necessary(props, m_key)) {
     while (1) {  //using while loop to prevent recursive calling, which could lead to stack overflow
       auto &prop = next_prop(props, ml, firstcall);
 
       if (!prop)
         return prop;
 
-      if (d_header_necessary(props, as_key)
+      if (d_header_necessary(props, m_key)
        && !bytes_available(props))
         break;
 
@@ -127,7 +127,7 @@ entity_properties_t& xcdr_v2_stream::next_entity(entity_properties_t &props, boo
     }
   } else {
     proplist *ptr = NULL;
-    if (as_key)
+    if (m_key)
       ptr = &props.m_keys_by_id;
     else
       ptr = &props.m_members_by_id;
@@ -208,16 +208,15 @@ bool xcdr_v2_stream::d_header_necessary(const entity_properties_t &props, bool a
 
 bool xcdr_v2_stream::list_necessary(const entity_properties_t &props, bool as_key)
 {
-  return props.e_ext == ext_mutable
-      && !as_key;
+  return props.e_ext == ext_mutable && !as_key;
 }
 
-void xcdr_v2_stream::start_struct(entity_properties_t &props, stream_mode mode, bool as_key)
+void xcdr_v2_stream::start_struct(entity_properties_t &props)
 {
-  if (!d_header_necessary(props, as_key))
+  if (!d_header_necessary(props, m_key))
     return;
 
-  switch (mode) {
+  switch (m_mode) {
     case stream_mode::write:
       write_d_header(props);
       break;
@@ -228,12 +227,14 @@ void xcdr_v2_stream::start_struct(entity_properties_t &props, stream_mode mode, 
     case stream_mode::read:
       read_d_header(props);
       break;
+    default:
+      break;
   }
 }
 
-void xcdr_v2_stream::finish_struct(entity_properties_t &props, stream_mode mode, bool as_key)
+void xcdr_v2_stream::finish_struct(entity_properties_t &props)
 {
-  if (d_header_necessary(props, as_key) && mode == stream_mode::write)
+  if (d_header_necessary(props, m_key) && m_mode == stream_mode::write)
     finish_d_header(props);
 }
 
