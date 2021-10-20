@@ -1431,6 +1431,70 @@ process_typedef(
   return IDL_RETCODE_OK;
 }
 
+static idl_retcode_t
+process_enum(
+  const idl_pstate_t* pstate,
+  const bool revisit,
+  const idl_path_t* path,
+  const void* node,
+  void* user_data)
+{
+  struct streams *str = (struct streams*)user_data;
+  struct generator *gen = str->generator;
+  const idl_enum_t *_enum = (const idl_enum_t *)node;
+  const idl_enumerator_t *enumerator;
+  uint32_t value;
+  const char *enum_name = NULL;
+
+  (void)pstate;
+  (void)revisit;
+  (void)path;
+
+  char *fullname = NULL;
+  if (IDL_PRINTA(&fullname, get_cpp11_fully_scoped_name, _enum, gen) < 0)
+    return IDL_RETCODE_NO_MEMORY;
+
+  const char *fmt = "template<>\n"\
+                    "inline %s enum_conversion<%s>(uint32_t in) {\n  switch (in) {\n";
+
+  if (putf(&str->props, fmt, fullname, fullname))
+    return IDL_RETCODE_NO_MEMORY;
+
+  //array of values already encountered
+  uint32_t already_encountered[232],
+           n_already_encountered = 0;
+
+  IDL_FOREACH(enumerator, _enum->enumerators) {
+    enum_name = get_cpp11_name(enumerator);
+    value = enumerator->value.value;
+    bool already_present = false;
+    for (uint32_t i = 0; i < n_already_encountered && !already_present; i++) {
+      if (value == already_encountered[i])
+        already_present = true;
+    }
+    if (already_present)
+      continue;
+
+    if (n_already_encountered >= 232)  //protection against buffer overflow in already_encountered[]
+      return IDL_RETCODE_ILLEGAL_EXPRESSION;
+    already_encountered[n_already_encountered++] = value;
+
+    if (putf(&str->props, "    %scase %"PRIu32":\n"
+                          "    return %s::%s;\n"
+                          "    break;\n",
+                          enumerator == _enum->default_enumerator ? "default:\n    " : "",
+                          value,
+                          fullname,
+                          enum_name) < 0)
+      return IDL_RETCODE_NO_MEMORY;
+  }
+
+  if (putf(&str->props,"  }\n}\n\n"))
+    return IDL_RETCODE_NO_MEMORY;
+
+  return IDL_RETCODE_OK;
+}
+
 idl_retcode_t
 generate_streamers(const idl_pstate_t* pstate, struct generator *gen)
 {
@@ -1454,7 +1518,7 @@ generate_streamers(const idl_pstate_t* pstate, struct generator *gen)
                   "namespace cdr{\n\n") < 0)
     return IDL_RETCODE_NO_MEMORY;
 
-  visitor.visit = IDL_STRUCT | IDL_UNION | IDL_MEMBER | IDL_CASE | IDL_CASE_LABEL | IDL_SWITCH_TYPE_SPEC | IDL_TYPEDEF;
+  visitor.visit = IDL_STRUCT | IDL_UNION | IDL_MEMBER | IDL_CASE | IDL_CASE_LABEL | IDL_SWITCH_TYPE_SPEC | IDL_TYPEDEF | IDL_ENUM;
   visitor.accept[IDL_ACCEPT_STRUCT] = &process_struct;
   visitor.accept[IDL_ACCEPT_UNION] = &process_union;
   visitor.accept[IDL_ACCEPT_MEMBER] = &process_member;
@@ -1462,6 +1526,7 @@ generate_streamers(const idl_pstate_t* pstate, struct generator *gen)
   visitor.accept[IDL_ACCEPT_CASE_LABEL] = &process_case_label;
   visitor.accept[IDL_ACCEPT_SWITCH_TYPE_SPEC] = &process_switch_type_spec;
   visitor.accept[IDL_ACCEPT_TYPEDEF] = &process_typedef;
+  visitor.accept[IDL_ACCEPT_ENUM] = &process_enum;
 
   if (idl_visit(pstate, pstate->root, &visitor, &streams)
    || flush(gen, &streams))
