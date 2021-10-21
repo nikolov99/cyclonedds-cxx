@@ -116,17 +116,17 @@ public:
 
 private:
 
-  static const uint32_t bytes_1;          //length field code indicating length is 1 byte
-  static const uint32_t bytes_2;          //length field code indicating length is 2 bytes
-  static const uint32_t bytes_4;          //length field code indicating length is 4 bytes
-  static const uint32_t bytes_8;          //length field code indicating length is 8 bytes
-  static const uint32_t nextint;          //length field code indicating length is the next integer field
-  static const uint32_t nextint_times_1;  //same as nextint
-  static const uint32_t nextint_times_4;  //length field code indicating length is the next integer field times 4
-  static const uint32_t nextint_times_8;  //length field code indicating length is the next integer field times 8
-  static const uint32_t lc_mask;          //mask for length field codes
-  static const uint32_t id_mask;          //mask for member ids
-  static const uint32_t must_understand;  //must understand member field flag
+  static const uint32_t bytes_1;          /**< length field code indicating length is 1 byte*/
+  static const uint32_t bytes_2;          /**< length field code indicating length is 2 bytes*/
+  static const uint32_t bytes_4;          /**< length field code indicating length is 4 bytes*/
+  static const uint32_t bytes_8;          /**< length field code indicating length is 8 bytes*/
+  static const uint32_t nextint;          /**< length field code indicating length is the next integer field*/
+  static const uint32_t nextint_times_1;  /**< same as nextint*/
+  static const uint32_t nextint_times_4;  /**< length field code indicating length is the next integer field times 4*/
+  static const uint32_t nextint_times_8;  /**< length field code indicating length is the next integer field times 8*/
+  static const uint32_t lc_mask;          /**< mask for length field codes*/
+  static const uint32_t id_mask;          /**< mask for member ids*/
+  static const uint32_t must_understand;  /**< must understand member field flag*/
 
   /**
    * @brief

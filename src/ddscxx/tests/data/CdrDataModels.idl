@@ -36,7 +36,7 @@ module CDR_testing {
   };
 
   //inheritance
-  struct base {
+  @mutable struct base {
     string base_str;
     @key char base_c;
   };
@@ -129,9 +129,21 @@ module CDR_testing {
     default: string str;
   };
 
+  union un_k switch (@key char) {
+    case 'a':
+    case 'b': char c;
+    case 'c':
+    case 'd': short s;
+    case 'e':
+    case 'f': long l;
+    default: string str;
+  };
+
   struct union_struct {
-    un a;
-    un b;
     @key un c;
+  };
+
+  struct union_struct_k {
+    @key un_k c;
   };
 };

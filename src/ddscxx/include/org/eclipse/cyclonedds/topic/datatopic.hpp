@@ -335,7 +335,7 @@ ddsi_serdata *serdata_from_keyhash(
 {
   (void)keyhash;
   (void)type;
-  //replace with (if key_size_max <= 16) then populate the data class with the key hash (key_read)
+  //replace with (if key_size_max <= 16) then populate the data class with the key hash
   return nullptr;
 }
 

@@ -114,15 +114,15 @@ public:
 
 private:
 
-  static const uint16_t pid_mask;                         // the mask for non-extended parameter list ids
-  static const uint16_t pid_extended;                     // indicating an extended entry
-  static const uint16_t pid_list_end;                     // guardian entry indicating end of parameter list
-  static const uint16_t pid_ignore;                       // ignore this entry
-  static const uint16_t pid_flag_impl_extension;          // bit flag indicating implementation specific extension
-  static const uint16_t pid_flag_must_understand;         // bit flag indicating that this entry must be parsed successfully or the entire sample must be discarded
-  static const uint32_t pl_extended_mask;                 // mask for extended parameter list ids
-  static const uint32_t pl_extended_flag_impl_extension;  // bit flag indicating implementation specific extension
-  static const uint32_t pl_extended_flag_must_understand; // bit flag indicating that this entry must be parsed successfully or the entire sample must be discarded
+  static const uint16_t pid_mask;                         /**< the mask for non-extended parameter list ids*/
+  static const uint16_t pid_extended;                     /**<  indicating an extended entry*/
+  static const uint16_t pid_list_end;                     /**<  guardian entry indicating end of parameter list*/
+  static const uint16_t pid_ignore;                       /**<  ignore this entry*/
+  static const uint16_t pid_flag_impl_extension;          /**<  bit flag indicating implementation specific extension*/
+  static const uint16_t pid_flag_must_understand;         /**< bit flag indicating that this entry must be parsed successfully or the entire sample must be discarded*/
+  static const uint32_t pl_extended_mask;                 /**<  mask for extended parameter list ids*/
+  static const uint32_t pl_extended_flag_impl_extension;  /**< bit flag indicating implementation specific extension*/
+  static const uint32_t pl_extended_flag_must_understand; /**< bit flag indicating that this entry must be parsed successfully or the entire sample must be discarded*/
 
   /**
    * @brief

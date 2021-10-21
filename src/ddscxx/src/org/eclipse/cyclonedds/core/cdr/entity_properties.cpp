@@ -35,7 +35,33 @@ void entity_properties::print(bool recurse, size_t depth, const char *prefix) co
 {
   std::cout << "d: " << depth;
   for (size_t i = 0; i < depth; i++) std::cout << "  ";
-  std::cout << prefix << ": m_id: " << m_id << " final: " << (is_last ? "yes" : "no") << std::endl;
+  std::cout << prefix << ": m_id: " << m_id << " final: " << (is_last ? "yes" : "no");
+
+  std::cout << " p_ext: ";
+  switch(p_ext) {
+    case ext_final:
+    std::cout << "FINAL";
+    break;
+    case ext_appendable:
+    std::cout << "APPENDABLE";
+    break;
+    case ext_mutable:
+    std::cout << "MUTABLE";
+    break;
+  }
+  std::cout << " e_ext: ";
+  switch(e_ext) {
+    case ext_final:
+    std::cout << "FINAL";
+    break;
+    case ext_appendable:
+    std::cout << "APPENDABLE";
+    break;
+    case ext_mutable:
+    std::cout << "MUTABLE";
+    break;
+  }
+  std::cout << std::endl;
   if (recurse) {
     for (const auto & e:m_members_by_seq) e.print(true, depth+1, "s:member");
     for (const auto & e:m_keys_by_seq) e.print(true, depth+1, "s:key   ");

@@ -471,20 +471,22 @@ protected:
      */
     entity_properties_t& next_prop(entity_properties_t &props, member_list_type list_type, bool &firstcall);
 
-    endianness m_stream_endianness,               //the endianness of the stream
-        m_local_endianness = native_endianness(); //the local endianness
-    size_t m_position = 0,                        //the current offset position in the stream
-        m_max_alignment,                          //the maximum bytes that can be aligned to
-        m_current_alignment = 1;                  //the current alignment
-    char* m_buffer = nullptr;                     //the current buffer in use
-    uint64_t m_status = 0,                        //the current status of streaming
-             m_fault_mask;                        //the mask for statuses that will causes streaming to be aborted
+    endianness m_stream_endianness,               /**< the endianness of the stream*/
+        m_local_endianness = native_endianness(); /**< the local endianness*/
+    size_t m_position = 0,                        /**< the current offset position in the stream*/
+        m_max_alignment,                          /**< the maximum bytes that can be aligned to*/
+        m_current_alignment = 1;                  /**< the current alignment*/
+    char* m_buffer = nullptr;                     /**< the current buffer in use*/
+    uint64_t m_status = 0,                        /**< the current status of streaming*/
+             m_fault_mask;                        /**< the mask for statuses that will cause streaming
+                                                       to be aborted*/
 
-    static entity_properties_t m_final;
-    entity_properties_t m_current_header;
+    static entity_properties_t m_final;           /**< A placeholder for the final entry to be returned
+                                                       from next_prop if we are reading from a stream*/
+    entity_properties_t m_current_header;         /**< Container for headers being read from a stream*/
 
     DDSCXX_WARNING_MSVC_OFF(4251)
-    std::stack<proplist::iterator> m_stack; //current iterators the stream is working over
+    std::stack<proplist::iterator> m_stack;       /**< Stack of iterators currently being handled*/
     DDSCXX_WARNING_MSVC_ON(4251)
 };
 
