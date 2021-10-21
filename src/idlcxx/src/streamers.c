@@ -1148,6 +1148,7 @@ print_constructed_type_close(
     "    props.m_keys_by_seq.push_back(final_entry());\n"
     "    props.finish();\n"
     "    initialized = true;\n"
+    "%1$s"
     "  }\n"
     "  return props;\n"
     "}\n\n";
@@ -1173,9 +1174,10 @@ print_switchbox_close(struct streams *streams)
   static const char *rfmt =
     "      default:\n"
     "      if (prop.must_understand\n"
-    "       && streamer.status(invalid_pl_entry))\n"
+    "       && streamer.status(must_understand_fail))\n"
     "        return;\n"
-    "      streamer.skip_entity(prop);\n"
+    "      else\n"
+    "        streamer.skip_entity(prop);\n"
     "      break;\n";
 
   if (putf(&streams->read, rfmt)

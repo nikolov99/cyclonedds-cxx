@@ -90,7 +90,7 @@ struct OMG_DDS_API entity_properties
   uint32_t e_sz = 0; /**< The size of the current entity as member field (only used in reading from streams).*/
   uint32_t d_sz = 0; /**< The size of the current entity as struct (only used in reading from streams).*/
   uint32_t m_id = 0; /**< The member id of the entity, it is the global field by which the entity is identified. */
-  bool must_understand = true; /**< If the reading end cannot parse a field with this header, it must discard the entire object. */
+  bool must_understand = false; /**< If the reading end cannot parse a field with this header, it must discard the entire object. */
   bool implementation_extension = false;
   bool keylist_is_pragma = false; /**< Indicates whether the keylist is #pragma*/
   bool is_last = false; /**< Indicates terminating entry for reading/writing entities, will cause the current subroutine to end and decrement the stack.*/
@@ -220,6 +220,23 @@ private:
    * @param[in] other The entity whose contents are to be merged into this one.
    */
   void merge(const entity_properties_t &other);
+
+  /**
+   * @brief
+   * Sets the must_understand flags from key list on member lists.
+   *
+   * Takes entities in keys_by_id and sets the must_understand flag on the matching entities in
+   * members_by_seq and members_by_id. Then calls this function on the sublists for the matching
+   * entities.
+   *
+   * @param[in] keys_by_id The list of keys to match in member lists.
+   * @param[in, out] members_by_seq The list members by sequence id to set the must understand flag on.
+   * @param[in, out] members_by_id The list members by member id to set the must understand flag on.
+   */
+  void copy_must_understand(
+    const proplist &keys_by_id,
+    proplist &members_by_seq,
+    proplist &members_by_id);
 };
 
 struct OMG_DDS_API final_entry: public entity_properties_t {

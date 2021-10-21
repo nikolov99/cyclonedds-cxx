@@ -92,6 +92,30 @@ void entity_properties::finish(bool at_root)
 
   for (auto &e : m_keys_by_id)
     e.finish(false);
+
+  if (at_root)
+    copy_must_understand(m_keys_by_id, m_members_by_seq, m_members_by_id);
+}
+
+void entity_properties::copy_must_understand(
+  const proplist &keys_by_id,
+  proplist &members_by_seq,
+  proplist &members_by_id)
+{
+  for (const auto & k:keys_by_id) {
+    if (!k)
+      continue;
+
+    assert(k.must_understand);
+
+    auto seq = std::find(members_by_seq.begin(), members_by_seq.end(), k);
+    auto id = std::find(members_by_id.begin(), members_by_id.end(), k);
+    assert(seq != members_by_seq.end() && id != members_by_id.end());
+
+    seq->must_understand = true;
+    id->must_understand = true;
+    copy_must_understand(k.m_keys_by_id, seq->m_members_by_seq, id->m_members_by_id);
+  }
 }
 
 void entity_properties::finish_keys(bool at_root)

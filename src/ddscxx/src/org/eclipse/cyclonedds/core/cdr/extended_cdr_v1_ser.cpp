@@ -173,13 +173,13 @@ void xcdr_v1_stream::write_header(entity_properties_t &props)
 
   if (extended_header(props)) {
     uint16_t smallid = pid_extended + pid_flag_must_understand;
-    uint32_t largeid = (props.m_id & pl_extended_mask) + pl_extended_flag_must_understand;
+    uint32_t largeid = (props.m_id & pl_extended_mask) + (props.must_understand ? pl_extended_flag_must_understand : 0);
     write(*this, smallid);
     write(*this, uint16_t(8));
     write(*this, largeid);
     write(*this, uint32_t(0));  /* length field placeholder, to be completed by finish_write_header */
   } else {
-    uint16_t smallid = static_cast<uint16_t>(props.m_id + pid_flag_must_understand);
+    uint16_t smallid = static_cast<uint16_t>(props.m_id + (props.must_understand ? pid_flag_must_understand : 0));
     write(*this, smallid);
     write(*this, uint16_t(0));  /* length field placeholder, to be completed by finish_write_header */
   }
