@@ -72,12 +72,20 @@ void xcdr_v1_stream::skip_entity(const entity_properties_t &props)
 
 entity_properties_t& xcdr_v1_stream::next_entity(entity_properties_t &props, bool as_key, stream_mode mode, bool &firstcall)
 {
-  if (mode != stream_mode::read)
-    return next_prop(props, as_key, firstcall);
+  member_list_type ml = member_list_type::member_by_seq;
+  if (as_key) {
+    if (props.keylist_is_pragma)
+      ml = member_list_type::key_by_seq;
+    else
+      ml = member_list_type::key_by_id;
+  }
 
-  if (!list_necessary(props)) {
+  if (mode != stream_mode::read)
+    return next_prop(props, ml, firstcall);
+
+  if (!list_necessary(props, as_key)) {
     while (1) {  //using while loop to prevent recursive calling, which could lead to stack overflow
-      auto &prop = next_prop(props, as_key, firstcall);
+      auto &prop = next_prop(props, ml, firstcall);
 
       entity_properties_t temp;
       if (prop.is_optional) {
@@ -198,9 +206,9 @@ void xcdr_v1_stream::finish_write_header(entity_properties_t &props)
   alignment(current_alignment);
 }
 
-void xcdr_v1_stream::finish_struct(entity_properties_t &props, stream_mode mode)
+void xcdr_v1_stream::finish_struct(entity_properties_t &props, stream_mode mode, bool as_key)
 {
-  if (!list_necessary(props))
+  if (!list_necessary(props, as_key))
     return;
 
   switch (mode) {
@@ -214,6 +222,12 @@ void xcdr_v1_stream::finish_struct(entity_properties_t &props, stream_mode mode)
     default:
       break;
   }
+}
+
+bool xcdr_v1_stream::list_necessary(const entity_properties_t &props, bool as_key)
+{
+  return props.e_ext == ext_mutable
+      && !as_key;
 }
 
 void xcdr_v1_stream::write_final_list_entry()

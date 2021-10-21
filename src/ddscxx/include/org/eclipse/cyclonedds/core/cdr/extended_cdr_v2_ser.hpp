@@ -98,8 +98,9 @@ public:
    *
    * @param[in, out] props The entity whose members might be represented by a parameter list.
    * @param[in] mode The current mode which is being used.
+   * @param[in] as_key If this is to be treated as just the key stream representation.
    */
-  void start_struct(entity_properties_t &props, stream_mode mode);
+  void start_struct(entity_properties_t &props, stream_mode mode, bool as_key);
 
   /**
    * @brief
@@ -109,8 +110,9 @@ public:
    *
    * @param[in, out] props The entity whose members might be represented by a parameter list.
    * @param[in] mode The current mode which is being used.
+   * @param[in] as_key If this is to be treated as just the key stream representation.
    */
-  void finish_struct(entity_properties_t &props, stream_mode mode);
+  void finish_struct(entity_properties_t &props, stream_mode mode, bool as_key);
 
 private:
 
@@ -215,10 +217,11 @@ private:
    * Checks whether a D-header is necessary for the indicated entity.
    *
    * @param[in] props The entity whose properties to check.
+   * @param[in] as_key If this is to be treated as just the key stream representation.
    *
    * @return Whether the entity props needs a D-header
    */
-  bool d_header_necessary(const entity_properties_t &props);
+  static bool d_header_necessary(const entity_properties_t &props, bool as_key);
 
   /**
    * @brief
@@ -238,10 +241,11 @@ private:
    * to read em headers from the stream.
    *
    * @param[in] props The entity whose members might be represented by a parameter list.
+   * @param[in] as_key If this is to be treated as just the key stream representation.
    *
    * @return Whether a list is necessary for this entity.
    */
-  bool list_necessary(const entity_properties_t &props) {return props.e_ext == ext_mutable;}
+  static bool list_necessary(const entity_properties_t &props, bool as_key);
 
   /**
    * @brief

@@ -98,7 +98,7 @@ public:
    *
    * As the extended cdr v1 stream does not have anything that requires delimiting between entities, this function does nothing.
    */
-  void start_struct(entity_properties_t &, stream_mode) {;}
+  void start_struct(entity_properties_t &, stream_mode, bool) {;}
 
   /**
    * @brief
@@ -108,8 +108,9 @@ public:
    *
    * @param[in, out] props The property tree to get the next entity from.
    * @param[in] mode Which mode to push/pop entities.
+   * @param[in] as_key If this is to be treated as just the key stream representation.
    */
-  void finish_struct(entity_properties_t &props, stream_mode mode);
+  void finish_struct(entity_properties_t &props, stream_mode mode, bool as_key);
 
 private:
 
@@ -141,8 +142,9 @@ private:
    * Determines whether a parameter list is necessary.
    *
    * @param[in] props The entity whose members might be represented by a parameter list.
+   * @param[in] as_key If this is to be treated as just the key stream representation.
    */
-  static bool list_necessary(const entity_properties_t &props) { return props.e_ext == ext_mutable;}
+  static bool list_necessary(const entity_properties_t &props, bool as_key);
 
   /**
    * @brief

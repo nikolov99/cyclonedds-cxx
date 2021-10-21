@@ -63,7 +63,7 @@ public:
    *
    * As the basic cdr stream does not have anything that requires delimiting between entities, this function does nothing.
    */
-  void start_struct(entity_properties_t &, stream_mode) {;}
+  void start_struct(entity_properties_t &, stream_mode, bool) {;}
 
   /**
    * @brief
@@ -71,7 +71,7 @@ public:
    *
    * As the basic cdr stream does not have anything that requires delimiting between entities, this function does nothing.
    */
-  void finish_struct(entity_properties_t &, stream_mode) {;}
+  void finish_struct(entity_properties_t &, stream_mode, bool) {;}
 
   /**
    * @brief

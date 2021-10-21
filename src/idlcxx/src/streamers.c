@@ -931,15 +931,9 @@ process_case(
       return IDL_RETCODE_NO_MEMORY;
 
     //only read the field if the union is not read as a key stream
-    if (_switch->key.value
-     && putf(&streams->read, "    if (!as_key) {\n"))
-      return IDL_RETCODE_NO_MEMORY;
-
-    if (process_entity(pstate, streams, _case->declarator, _case->type_spec, loc))
-      return IDL_RETCODE_NO_MEMORY;
-
-    if (_switch->key.value
-     && putf(&streams->read, "    } //as_key\n"))
+    if ((_switch->key.value && multi_putf(streams, ALL, "      if (!as_key) {\n"))
+     || process_entity(pstate, streams, _case->declarator, _case->type_spec, loc)
+     || (_switch->key.value && multi_putf(streams, ALL, "      } //!as_key\n")))
       return IDL_RETCODE_NO_MEMORY;
 
     if (multi_putf(streams, (WRITE | MOVE), "      break;\n")
@@ -1060,7 +1054,7 @@ process_keylist(
 {
   const idl_key_t *key = NULL;
 
-  if (putf(&streams->props, "    props.m_keys_by_seq.clear();\n"))
+  if (putf(&streams->props, "    props.keylist_is_pragma = true;\n"))
     return IDL_RETCODE_NO_MEMORY;
 
   IDL_FOREACH(key, _struct->keylist->keys) {
@@ -1090,7 +1084,7 @@ print_constructed_type_open(struct streams *streams, const idl_node_t *node)
     "  thread_local static entity_properties_t props;\n"
     "  if (!initialized) {\n";
   const char *sfmt =
-    "  streamer.start_struct(props,cdr_stream::stream_mode::{T});\n";
+    "  streamer.start_struct(props,cdr_stream::stream_mode::{T},as_key);\n";
 
   if (multi_putf(streams, ALL, fmt, name)
    || putf(&streams->props, pfmt1, name, pfmt2)
@@ -1140,25 +1134,31 @@ print_switchbox_open(struct streams *streams)
 }
 
 static idl_retcode_t
-print_constructed_type_close(struct streams *streams)
+print_constructed_type_close(
+  const idl_pstate_t* pstate,
+  const void *node,
+  struct streams *streams)
 {
-  const char *fmt =
-    "  streamer.finish_struct(props,cdr_stream::stream_mode::{T});\n";
-  const char *rfmt =
+  static const char *fmt =
+    "  streamer.finish_struct(props,cdr_stream::stream_mode::{T},as_key);\n"
     "  (void)instance;\n"
     "}\n\n";
   const char *pfmt =
     "    props.m_members_by_seq.push_back(final_entry());\n"
     "    props.m_keys_by_seq.push_back(final_entry());\n"
-    "    props.created_sorted();\n"
+    "    props.finish();\n"
     "    initialized = true;\n"
     "  }\n"
     "  return props;\n"
     "}\n\n";
+  static const char *mixing_check =
+    "    assert(!props.keylist_is_pragma);\n";
 
-  if (multi_putf(streams, CONST, fmt)
-   || multi_putf(streams, ALL, rfmt)
-   || putf(&streams->props, pfmt))
+  bool keylist = idl_is_struct(node)
+              && (pstate->flags & IDL_FLAG_KEYLIST)
+              && ((const idl_struct_t*)node)->keylist;
+  if (multi_putf(streams, ALL, fmt)
+   || putf(&streams->props, pfmt, keylist ? "" : mixing_check))
     return IDL_RETCODE_NO_MEMORY;
 
   return IDL_RETCODE_OK;
@@ -1193,7 +1193,7 @@ print_entry_point_functions(
   const char *fmt =
     "template<typename S, std::enable_if_t<std::is_base_of<cdr_stream, S>::value, bool> = true >\n"
     "void {T}(S& str, {C}%1$s& instance, bool as_key) {\n"
-    "  auto props = get_type_props<%1$s>();\n"
+    "  auto &props = get_type_props<%1$s>();\n"
     "  {T}(str, instance, props, as_key); \n"
     "}\n\n";
 
@@ -1220,7 +1220,7 @@ process_struct(
 
   if (revisit) {
     if (print_switchbox_close(user_data)
-     || print_constructed_type_close(user_data)
+     || print_constructed_type_close(pstate, node, user_data)
      || print_entry_point_functions(streams, fullname))
       return IDL_RETCODE_NO_MEMORY;
 
@@ -1326,7 +1326,7 @@ process_union(
       return IDL_RETCODE_NO_MEMORY;
 
     if (putf(&streams->max, pfmt)
-     || print_constructed_type_close(user_data))
+     || print_constructed_type_close(pstate, node, user_data))
       return IDL_RETCODE_NO_MEMORY;
 
     return flush(streams->generator, streams);

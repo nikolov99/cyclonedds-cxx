@@ -50,27 +50,51 @@ void entity_properties::set_member_props(uint32_t member_id, bool optional)
   is_optional = optional;
 }
 
-void entity_properties::created_sorted()
+void entity_properties::finish(bool at_root)
 {
-  m_members_by_id = sort_proplist(m_members_by_seq, &member_id_comp);
-  for (auto & e:m_members_by_id) {
-    e.m_members_by_seq.clear();
-    e.m_keys_by_seq.clear();
+  finish_keys(at_root);
+  sort_by_member_id();
+
+  for (auto &e : m_members_by_seq)
+    e.finish(false);
+
+  for (auto &e : m_members_by_id)
+    e.finish(false);
+
+  for (auto &e : m_keys_by_seq)
+    e.finish(false);
+
+  for (auto &e : m_keys_by_id)
+    e.finish(false);
+}
+
+void entity_properties::finish_keys(bool at_root)
+{
+  if (!at_root && m_keys_by_seq.size() < 2) {
+    if (m_keys_by_seq.size())
+      assert(!m_keys_by_seq.back());
+    m_keys_by_seq = m_members_by_seq;
   }
-  m_keys_by_id = sort_proplist(m_keys_by_seq, &member_id_comp);
-  for (auto & e:m_keys_by_id) {
-    e.m_members_by_seq.clear();
-    e.m_keys_by_seq.clear();
+
+  for (auto & e:m_keys_by_seq) {
+    e.must_understand = true;
+    e.keylist_is_pragma = keylist_is_pragma;
+    e.e_ext = ext_final;
+    e.p_ext = ext_final;
   }
 }
 
-proplist entity_properties::sort_proplist(
-  const proplist &in,
-  bool (*comp)(const entity_properties_t &lhs, const entity_properties_t &rhs))
+void entity_properties::sort_by_member_id()
 {
+  m_members_by_id = sort_proplist(m_members_by_seq);
+  m_keys_by_id = sort_proplist(m_keys_by_seq);
+}
 
+proplist entity_properties::sort_proplist(
+  const proplist &in)
+{
   auto out = in;
-  out.sort(*comp);
+  out.sort(member_id_comp);
 
   if (out.size()) {
     auto it2 = out.begin();
@@ -81,7 +105,6 @@ proplist entity_properties::sort_proplist(
         it->merge(*it2);
         it2 = out.erase(it2);
       } else {
-        it->created_sorted();
         it = it2++;
       }
     }

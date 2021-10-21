@@ -92,6 +92,7 @@ struct OMG_DDS_API entity_properties
   uint32_t m_id = 0; /**< The member id of the entity, it is the global field by which the entity is identified. */
   bool must_understand = true; /**< If the reading end cannot parse a field with this header, it must discard the entire object. */
   bool implementation_extension = false;
+  bool keylist_is_pragma = false; /**< Indicates whether the keylist is #pragma*/
   bool is_last = false; /**< Indicates terminating entry for reading/writing entities, will cause the current subroutine to end and decrement the stack.*/
   bool ignore = false; /**< Indicates that this field must be ignored.*/
   bool is_optional = false; /**< Indicates that this field can be empty (length 0) for reading/writing purposes.*/
@@ -105,12 +106,16 @@ struct OMG_DDS_API entity_properties
   DDSCXX_WARNING_MSVC_ON(4251)
 
   operator bool() const {return !is_last;}
+  bool operator==(const entity_properties_t &other) const {return m_id == other.m_id;}
   static bool member_id_comp(const entity_properties_t &lhs, const entity_properties_t &rhs);
-  void created_sorted();
-  static proplist sort_proplist(const proplist &in, bool (*comp)(const entity_properties_t &lhs, const entity_properties_t &rhs));
-  void merge(const entity_properties_t &other);
+  void finish(bool at_root = true);
   void set_member_props(uint32_t member_id, bool optional);
   void print(bool recurse = true, size_t depth = 0, const char *prefix = "") const;
+private:
+  static proplist sort_proplist(const proplist &in);
+  void sort_by_member_id();
+  void finish_keys(bool at_root);
+  void merge(const entity_properties_t &other);
 };
 
 struct OMG_DDS_API final_entry: public entity_properties_t {

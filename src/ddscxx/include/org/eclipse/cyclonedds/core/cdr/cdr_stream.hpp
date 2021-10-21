@@ -417,8 +417,9 @@ public:
      *
      * @param[in,out] props The entity whose members might be represented by a parameter list.
      * @param[in] mode The current mode which is being used.
+     * @param[in] as_key If this is to be treated as just the key stream representation.
      */
-    virtual void start_struct(entity_properties_t &props, stream_mode mode) = 0;
+    virtual void start_struct(entity_properties_t &props, stream_mode mode, bool as_key) = 0;
 
     /**
      * @brief
@@ -429,10 +430,30 @@ public:
      *
      * @param[in,out] props The entity whose members might be represented by a parameter list.
      * @param[in] mode The current mode which is being used.
+     * @param[in] as_key If this is to be treated as just the key stream representation.
      */
-    virtual void finish_struct(entity_properties_t &props, stream_mode mode) = 0;
+    virtual void finish_struct(entity_properties_t &props, stream_mode mode, bool as_key) = 0;
 
 protected:
+
+    /**
+     * @brief
+     * Member list types/
+     *
+     * @enum member_list_type Which type of list of entries is to be iterated over,
+     * used in calls to cdr_stream::next_prop.
+     *
+     * @var member_list_type::member_by_seq Member entries in order of declaration.
+     * @var member_list_type::member_by_id Member entries sorted by member id.
+     * @var member_list_type::key_by_seq Key entries in order of declaration.
+     * @var member_list_type::key_by_id Key entries sorted by member id.
+     */
+    enum class member_list_type {
+      member_by_seq,
+      member_by_id,
+      key_by_seq,
+      key_by_id
+    };
 
     /**
      * @brief
@@ -443,12 +464,12 @@ protected:
      * This function is to be implemented in cdr streaming implementations.
      *
      * @param[in, out] props The property tree to get the next entity from.
-     * @param[in] as_key Whether to take the key entities, or the normal member entities.
+     * @param[in] list_type Which list to take the next property from
      * @param[in, out] firstcall Whether it is the first time calling the function for props, will store first iterator if true, and then set to false.
      *
      * @return The next entity to be processed, or the final entity if the current tree level does not hold more entities.
      */
-    entity_properties_t& next_prop(entity_properties_t &props, bool as_key, bool &firstcall);
+    entity_properties_t& next_prop(entity_properties_t &props, member_list_type list_type, bool &firstcall);
 
     endianness m_stream_endianness,               //the endianness of the stream
         m_local_endianness = native_endianness(); //the local endianness
