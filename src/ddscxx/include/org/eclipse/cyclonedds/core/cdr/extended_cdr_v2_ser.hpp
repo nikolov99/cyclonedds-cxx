@@ -12,10 +12,7 @@
 #ifndef EXTENDED_CDR_SERIALIZATION_V2_HPP_
 #define EXTENDED_CDR_SERIALIZATION_V2_HPP_
 
-#include "basic_cdr_ser.hpp"
-#include <org/eclipse/cyclonedds/core/type_helpers.hpp>
-#include <dds/core/Exception.hpp>
-#include <cassert>
+#include "cdr_stream.hpp"
 
 namespace org {
 namespace eclipse {
@@ -231,7 +228,7 @@ private:
    *
    * @return Whether the entity props needs a EM-header
    */
-  bool em_header_necessary(const entity_properties_t &props);
+  static bool em_header_necessary(const entity_properties_t &props);
 
   /**
    * @brief

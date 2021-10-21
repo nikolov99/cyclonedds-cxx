@@ -109,17 +109,6 @@ enum class endianness {
  */
 constexpr endianness native_endianness() { return endianness(DDSRT_ENDIAN); }
 
-
-/**
- * @brief
- * Returns whether a byte swap is necessary for an incoming data set.
- *
- * @param[in] remote The remote (incoming) data endianness.
- *
- * @return Whether the local and remote datasets have the same endianness.
- */
-inline bool swap_necessary(endianness remote) {return native_endianness() != remote;}
-
 /**
  * @brief
  * Serialization status bitmasks.

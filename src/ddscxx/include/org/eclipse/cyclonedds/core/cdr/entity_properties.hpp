@@ -246,7 +246,7 @@ struct OMG_DDS_API final_entry: public entity_properties_t {
 };
 
 template<typename T>
-inline entity_properties_t& get_type_props() {
+entity_properties_t& get_type_props() {
   thread_local static bool initialized = false;
   thread_local static entity_properties_t props;
   if (!initialized) {

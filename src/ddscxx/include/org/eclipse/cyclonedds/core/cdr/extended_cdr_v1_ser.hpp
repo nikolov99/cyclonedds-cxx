@@ -13,9 +13,6 @@
 #define EXTENDED_CDR_SERIALIZATION_V1_HPP_
 
 #include "cdr_stream.hpp"
-#include <org/eclipse/cyclonedds/core/type_helpers.hpp>
-#include <dds/core/Exception.hpp>
-#include <cassert>
 
 namespace org {
 namespace eclipse {
@@ -212,7 +209,7 @@ private:
    *
    * @return Whether an extended format header is necessary.
    */
-  bool extended_header(const entity_properties_t &props);
+  static bool extended_header(const entity_properties_t &props);
 };
 
 /**

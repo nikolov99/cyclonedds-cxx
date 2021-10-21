@@ -13,8 +13,6 @@
 #define BASIC_CDR_SERIALIZATION_HPP_
 
 #include "cdr_stream.hpp"
-#include <org/eclipse/cyclonedds/core/type_helpers.hpp>
-#include <dds/core/Exception.hpp>
 
 namespace org {
 namespace eclipse {

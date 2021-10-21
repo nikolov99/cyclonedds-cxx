@@ -173,7 +173,7 @@ emit_member_methods(
           "  %3$s<%1$s>& %2$s() { return this->%2$s_; }\n"
           "  void %2$s(const %3$s<%1$s>& _val_) { this->%2$s_ = _val_; }\n"
           "  void %2$s(%3$s<%1$s>&& _val_) { this->%2$s_ = _val_; }\n";
-  else if (idl_mask(type_spec) & (IDL_BASE_TYPE | IDL_ENUM))
+  else if (idl_is_base_type(type_spec) || idl_is_enum(type_spec))
     fmt = "  %1$s %2$s() const { return this->%2$s_; }\n"
           "  %1$s& %2$s() { return this->%2$s_; }\n"
           "  void %2$s(%1$s _val_) { this->%2$s_ = _val_; }\n";

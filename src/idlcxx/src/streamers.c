@@ -182,7 +182,7 @@ static idl_retcode_t flush(struct generator* gen, struct streams* streams)
 #define NOMAX (ALL & ~MAX)
 
 //mapping of streaming flags and token replacements
-static char tokens[2] = {'T', 'C'};
+static const char tokens[2] = {'T', 'C'};
 
 static struct { uint32_t id; size_t O; const char *token_replacements[2]; } map[] = {
   { WRITE, offsetof(struct streams, write), {"write", "const "} },
@@ -449,8 +449,8 @@ sequence_writes(const idl_pstate_t* pstate,
 
   if ((idl_is_base_type(type_spec) || idl_is_enum(type_spec))
     && (idl_mask(type_spec) & IDL_BOOL) != IDL_BOOL) {
-    const char* sfmt = "      {T}(streamer, %1$s[0], se_%2$u);\n";
-    const char* mfmt = "      {T}(streamer, %1$s(), se_%2$u);\n";
+    static const char* sfmt = "      {T}(streamer, %1$s[0], se_%2$u);\n";
+    static const char* mfmt = "      {T}(streamer, %1$s(), se_%2$u);\n";
     char* type = NULL;
 
     if (IDL_PRINTA(&type, get_cpp11_type, type_spec, streams->generator) < 0
@@ -462,7 +462,7 @@ sequence_writes(const idl_pstate_t* pstate,
     return IDL_RETCODE_OK;
   }
 
-  const char* fmt = "      for (uint32_t i_%1$u = 0; i_%1$u < se_%1$u; i_%1$u++) {\n";
+  static const char* fmt = "      for (uint32_t i_%1$u = 0; i_%1$u < se_%1$u; i_%1$u++) {\n";
   if (multi_putf(streams, ALL, fmt, depth))
     return IDL_RETCODE_NO_MEMORY;
 
@@ -486,8 +486,8 @@ sequence_writes(const idl_pstate_t* pstate,
       return IDL_RETCODE_NO_MEMORY;
   }
 
-  fmt = "      }  //i_%1$u\n";
-  if (multi_putf(streams, ALL, fmt, depth))
+  static const char* cfmt = "      }  //i_%1$u\n";
+  if (multi_putf(streams, ALL, cfmt, depth))
     return IDL_RETCODE_NO_MEMORY;
 
   return IDL_RETCODE_OK;
@@ -532,7 +532,7 @@ unroll_sequence(const idl_pstate_t* pstate,
                                "      %2$s.resize(se_%1$u);\n"\
                                "      if (se_%1$u > 0)\n"\
                                "      {\n";
-  const char* mfmt = "      {\n"\
+  static const char* mfmt = "      {\n"\
                      "      uint32_t se_%1$u = %2$u;\n"\
                      "      max(streamer, uint32_t(0));\n";
 
@@ -563,11 +563,11 @@ unroll_array(
   uint32_t array_depth)
 {
   if (array_depth) {
-    const char* afmt = "      for ({C}auto & a_%1$u:a_%2$u)\n";
+    static const char* afmt = "      for ({C}auto & a_%1$u:a_%2$u)\n";
     if (multi_putf(streams, ALL, afmt, array_depth+1, array_depth))
       return IDL_RETCODE_NO_MEMORY;
   } else {
-    const char* afmt = "      for ({C}auto & a_%1$u:%2$s)\n";
+    static const char* afmt = "      for ({C}auto & a_%1$u:%2$s)\n";
     if (multi_putf(streams, ALL, afmt, array_depth+1, accessor))
       return IDL_RETCODE_NO_MEMORY;
   }
@@ -588,7 +588,7 @@ insert_array_primitives_copy(
   if (n_arr && IDL_PRINTA(&accessor, get_array_accessor, declarator, &n_arr) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
-  const char *fmt = "      {T}(streamer, %1$s[0], %2$u);\n";
+  static const char *fmt = "      {T}(streamer, %1$s[0], %2$u);\n";
 
   if (multi_putf(streams, ALL, fmt, accessor, a_size))
     return IDL_RETCODE_NO_MEMORY;
@@ -866,9 +866,8 @@ process_member(
 
   IDL_FOREACH(declarator, mem->declarators) {
     //generate case
-    const char *fmt =
+    static const char *fmt =
       "      case %"PRIu32":\n";
-
 
     if (multi_putf(streams, ALL, fmt, declarator->id.value)
      || add_member_start(declarator, streams))
@@ -1002,7 +1001,7 @@ process_key(
 {
   const idl_type_spec_t *type_spec = _struct;
   const idl_declarator_t *decl = NULL;
-  const char *fmt =
+  static const char *fmt =
     "    {\n"
     "      entity_properties_t *ptr = &props;\n";
 
@@ -1074,18 +1073,18 @@ print_constructed_type_open(struct streams *streams, const idl_node_t *node)
   if (IDL_PRINTA(&name, get_cpp11_fully_scoped_name, node, streams->generator) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
-  const char *fmt =
+  static const char *fmt =
     "template<typename T, std::enable_if_t<std::is_base_of<cdr_stream, T>::value, bool> = true >\n"
     "void {T}(T& streamer, {C}%1$s& instance, entity_properties_t &props, bool as_key) {\n";
-  const char *pfmt1 =
+  static const char *pfmt1 =
     "template<>\n"
     "entity_properties_t& get_type_props<%s>()%s";
-  const char *pfmt2 =
+  static const char *pfmt2 =
     " {\n"
     "  thread_local static bool initialized = false;\n"
     "  thread_local static entity_properties_t props;\n"
     "  if (!initialized) {\n";
-  const char *sfmt =
+  static const char *sfmt =
     "  streamer.start_struct(props,cdr_stream::stream_mode::{T},as_key);\n";
 
   if (multi_putf(streams, ALL, fmt, name)
@@ -1117,19 +1116,19 @@ print_constructed_type_open(struct streams *streams, const idl_node_t *node)
 static idl_retcode_t
 print_switchbox_open(struct streams *streams)
 {
-  const char *fmt =
+  static const char *fmt =
     "  bool firstcall = true;\n"
-    "  while (auto prop = streamer.next_entity(props, as_key, cdr_stream::stream_mode::{T}, firstcall)) {\n"
+    "  while (auto &prop = streamer.next_entity(props, as_key, cdr_stream::stream_mode::{T}, firstcall)) {\n"
+    "%1$s"
     "    switch (prop.m_id) {\n";
-  const char *rfmt =
-    "  bool firstcall = true;\n"
-    "  while (auto prop = streamer.next_entity(props, as_key, cdr_stream::stream_mode::read, firstcall)) {\n"
-    "    if (prop.ignore)\n"
+  static const char *skipfmt =
+    "    if (prop.ignore) {\n"
     "      streamer.skip_entity(prop);\n"
-    "    switch (prop.m_id) {\n";
+    "      continue;\n"
+    "    }\n";
 
-  if (multi_putf(streams, CONST, fmt)
-   || putf(&streams->read, rfmt))
+  if (multi_putf(streams, CONST, fmt, "")
+   || multi_putf(streams, READ, fmt, skipfmt))
     return IDL_RETCODE_NO_MEMORY;
 
   return IDL_RETCODE_OK;
@@ -1145,7 +1144,7 @@ print_constructed_type_close(
     "  streamer.finish_struct(props,cdr_stream::stream_mode::{T},as_key);\n"
     "  (void)instance;\n"
     "}\n\n";
-  const char *pfmt =
+  static const char *pfmt =
     "    props.m_members_by_seq.push_back(final_entry());\n"
     "    props.m_keys_by_seq.push_back(final_entry());\n"
     "    props.finish();\n"
@@ -1194,7 +1193,7 @@ print_entry_point_functions(
   struct streams *streams,
   char *fullname)
 {
-  const char *fmt =
+  static const char *fmt =
     "template<typename S, std::enable_if_t<std::is_base_of<cdr_stream, S>::value, bool> = true >\n"
     "void {T}(S& str, {C}%1$s& instance, bool as_key) {\n"
     "  auto &props = get_type_props<%1$s>();\n"
@@ -1479,7 +1478,7 @@ process_enum(
   if (IDL_PRINTA(&fullname, get_cpp11_fully_scoped_name, _enum, gen) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
-  const char *fmt = "template<>\n"\
+  static const char *fmt = "template<>\n"\
                     "%s enum_conversion<%s>(uint32_t in)%s";
 
   if (putf(&str->props, fmt, fullname, fullname, " {\n  switch (in) {\n")
