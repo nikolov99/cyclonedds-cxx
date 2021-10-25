@@ -37,13 +37,13 @@ module CDR_testing {
 
   //inheritance
   @mutable struct base {
-    string base_str;
-    @key char base_c;
+    string str;
+    @key char c;
   };
 
   @mutable struct derived : base {
-    @id(123) string str;
-    @id(234) @key char c;
+    @id(123) string str_d;
+    @id(234) char c_d;
   };
 
   //sequence

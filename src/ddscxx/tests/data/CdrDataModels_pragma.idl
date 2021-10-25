@@ -15,6 +15,6 @@ module CDR_testing {
     sub_2 c;
     sub_2 d;
   };
-  #pragma keylist pragma_keys c.s_2.l_2 c.s_1.l_2 c.s_2.l_1
+  #pragma keylist pragma_keys c.s_1.l_2 c.s_2.l_2 d.s_1.l_2 d.s_2.l_2
 
 };

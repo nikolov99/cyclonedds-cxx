@@ -169,7 +169,7 @@ void CDRStreamer::VerifyReadOneDeeper(const bytes &in, const T& out, stream_type
   if (as_key) {
     ASSERT_EQ(buffer.c().size(), out.c().size());
     for (size_t i = 0; i < buffer.c().size() && i < out.c().size(); i++)
-      ASSERT_EQ(buffer.c()[i].base_c(), out.c()[i].base_c());
+      ASSERT_EQ(buffer.c()[i].c(), out.c()[i].c());
   } else {
     ASSERT_EQ(buffer, out);
   }
@@ -370,51 +370,50 @@ TEST_F(CDRStreamer, cdr_nested)
 TEST_F(CDRStreamer, cdr_inherited)
 {
   derived DS("gfedcb", 'a');
-  DS.base_str("hjklmn");
-  DS.base_c('o');
+  DS.str("hjklmn");
+  DS.c('o');
 
   bytes DS_basic_normal {
-      0x00, 0x00, 0x00, 0x07 /*derived::base.base_str.length*/, 'h', 'j', 'k', 'l', 'm', 'n', '\0' /*derived::base.base_str.c_str*/,
-      'o'/*derived::base.base_c*/,
-      0x00, 0x00, 0x00, 0x07 /*derived.str.length*/, 'g', 'f', 'e', 'd', 'c', 'b', '\0'/*derived.str.c_str*/,
-      'a'/*derived.c*/
+      0x00, 0x00, 0x00, 0x07 /*derived::base.str.length*/, 'h', 'j', 'k', 'l', 'm', 'n', '\0' /*derived::base.str.c_str*/,
+      'o'/*derived::base.c*/,
+      0x00, 0x00, 0x00, 0x07 /*derived.str_d.length*/, 'g', 'f', 'e', 'd', 'c', 'b', '\0'/*derived.str_d.c_str*/,
+      'a'/*derived.c_d*/
       };
   bytes DS_basic_key {
-      'o'/*derived::base.base_c*/,
-      'a'/*derived.c*/
+      'o'/*derived::base.c*/
       };
   bytes DS_xcdr_v1_normal {
-      0x7F, 0x01, 0x00, 0x08 /*derived::base.base_str.mheader (pid_list_extended + must_understand + length = 8)*/,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0B /*derived::base.base_str.mheader (extended)*/,
-      0x00, 0x00, 0x00, 0x07 /*derived::base.base_str.length*/, 'h', 'j', 'k', 'l', 'm', 'n', '\0' /*derived::base.base_str.c_str*/,
+      0x7F, 0x01, 0x00, 0x08 /*derived::base.str.mheader (pid_list_extended + must_understand + length = 8)*/,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0B /*derived::base.str.mheader (extended)*/,
+      0x00, 0x00, 0x00, 0x07 /*derived::base.str.length*/, 'h', 'j', 'k', 'l', 'm', 'n', '\0' /*derived::base.str.c_str*/,
       0x00 /*padding bytes (1)*/,
-      0x40, 0x01, 0x00, 0x01 /*derived::base.base_c.mheader*/,
-      'o'/*derived::base.base_c*/,
+      0x40, 0x01, 0x00, 0x01 /*derived::base.c.mheader*/,
+      'o'/*derived::base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
-      0x7F, 0x01, 0x00, 0x08 /*derived.str.mheader (pid_list_extended + must_understand + length = 8)*/,
-      0x00, 0x00, 0x00, 0x7B, 0x00, 0x00, 0x00, 0x0B /*derived.str.mheader (extended)*/,
-      0x00, 0x00, 0x00, 0x07 /*derived.str.length*/, 'g', 'f', 'e', 'd', 'c', 'b', '\0'/*derived.str.c_str*/,
+      0x7F, 0x01, 0x00, 0x08 /*derived.str_d.mheader (pid_list_extended + must_understand + length = 8)*/,
+      0x00, 0x00, 0x00, 0x7B, 0x00, 0x00, 0x00, 0x0B /*derived.str_d.mheader (extended)*/,
+      0x00, 0x00, 0x00, 0x07 /*derived.str_d.length*/, 'g', 'f', 'e', 'd', 'c', 'b', '\0'/*derived.str_d.c_str*/,
       0x00 /*padding bytes (1)*/,
-      0x40, 0xEA, 0x00, 0x01 /*derived.c.mheader*/,
-      'a'/*derived.c*/,
+      0x00, 0xEA, 0x00, 0x01 /*derived.c_d.mheader*/,
+      'a'/*derived.c_d*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x7F, 0x02, 0x00, 0x00 /*inner list termination header*/
       };
   bytes DS_xcdr_v2_normal {
       0x00, 0x00, 0x00, 0x35 /*derived.dheader*/,
-      0x40, 0x00, 0x00, 0x00 /*derived::base.base_str.emheader*/,
-      0x00, 0x00, 0x00, 0x0B /*derived::base.base_str.emheader.nextint*/,
-      0x00, 0x00, 0x00, 0x07 /*derived::base.base_str.length*/, 'h', 'j', 'k', 'l', 'm', 'n', '\0' /*derived::base.base_str.c_str*/,
+      0x40, 0x00, 0x00, 0x00 /*derived::base.str.emheader*/,
+      0x00, 0x00, 0x00, 0x0B /*derived::base.str.emheader.nextint*/,
+      0x00, 0x00, 0x00, 0x07 /*derived::base.str.length*/, 'h', 'j', 'k', 'l', 'm', 'n', '\0' /*derived::base.str.c_str*/,
       0x00 /*padding bytes (1)*/,
-      0x80, 0x00, 0x00, 0x01 /*derived::base.base_c.emheader*/,
-      'o'/*derived::base.base_c*/,
+      0x80, 0x00, 0x00, 0x01 /*derived::base.c.emheader*/,
+      'o'/*derived::base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
-      0x40, 0x00, 0x00, 0x7B /*derived.str.emheader*/,
-      0x00, 0x00, 0x00, 0x0B /*derived.str.emheader.nextint*/,
-      0x00, 0x00, 0x00, 0x07 /*derived.str.length*/, 'g', 'f', 'e', 'd', 'c', 'b', '\0'/*derived.str.c_str*/,
+      0x40, 0x00, 0x00, 0x7B /*derived.str_d.emheader*/,
+      0x00, 0x00, 0x00, 0x0B /*derived.str_d.emheader.nextint*/,
+      0x00, 0x00, 0x00, 0x07 /*derived.str_d.length*/, 'g', 'f', 'e', 'd', 'c', 'b', '\0'/*derived.str_d.c_str*/,
       0x00 /*padding bytes (1)*/,
-      0x80, 0x00, 0x00, 0xEA /*derived.c.emheader*/,
-      'a' /*derived.c*/
+      0x00, 0x00, 0x00, 0xEA /*derived.c_d.emheader*/,
+      'a' /*derived.c_d*/
       };
 
   stream_test(DS, DS_basic_normal, DS_basic_key, DS_xcdr_v1_normal, DS_basic_key, DS_xcdr_v2_normal, DS_basic_key)
@@ -459,7 +458,7 @@ TEST_F(CDRStreamer, cdr_sequence)
     read it*/
   bytes SS_xcdr_v2_normal_lc_not_4 {
       0x00, 0x00, 0x00, 0x24/*sequence_struct.dheader*/,
-      0xD0, 0x00, 0x00, 0x00 /*derived.c.emheader*/, /*lc = 5: length = sequence_struct.c.length*1*/
+      0xD0, 0x00, 0x00, 0x00 /*derived.c_d.emheader*/, /*lc = 5: length = sequence_struct.c.length*1*/
       0x00, 0x00, 0x00, 0x03/*sequence_struct.c.length*/, 'z', 'y', 'x'/*sequence_struct.c.data*/,
       0x00 /*padding bytes (1)*/,
       0x60, 0x00, 0x00, 0x01 /*derived.l.emheader*/, /*lc = 6: length = sequence_struct.c.length*4*/
@@ -501,89 +500,89 @@ TEST_F(CDRStreamer, cdr_typedef)
 
   bytes TDS_basic_normal {
       0x00, 0x00, 0x00, 0x04/*typedef_struct.c.length*/,
-      0x00, 0x00, 0x00, 0x04/*base.base_str.length*/, 'q', 'w', 'e', '\0' /*base.base_str.c_str*/,
-      'a'/*base.base_c*/,
+      0x00, 0x00, 0x00, 0x04/*base.str.length*/, 'q', 'w', 'e', '\0' /*base.str.c_str*/,
+      'a'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
-      0x00, 0x00, 0x00, 0x04/*base.base_str.length*/, 'w', 'e', 'r', '\0' /*base.base_str.c_str*/,
-      'b'/*base.base_c*/,
+      0x00, 0x00, 0x00, 0x04/*base.str.length*/, 'w', 'e', 'r', '\0' /*base.str.c_str*/,
+      'b'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
-      0x00, 0x00, 0x00, 0x04/*base.base_str.length*/, 'e', 'r', 't', '\0' /*base.base_str.c_str*/,
-      'c'/*base.base_c*/,
+      0x00, 0x00, 0x00, 0x04/*base.str.length*/, 'e', 'r', 't', '\0' /*base.str.c_str*/,
+      'c'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
-      0x00, 0x00, 0x00, 0x04/*base.base_str.length*/, 'r', 't', 'y', '\0' /*base.base_str.c_str*/,
-      'd'/*base.base_c*/,
+      0x00, 0x00, 0x00, 0x04/*base.str.length*/, 'r', 't', 'y', '\0' /*base.str.c_str*/,
+      'd'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x00, 0x00, 0x00, 0x03/*typedef_struct.l.length*/,
-      0x00, 0x00, 0x00, 0x04/*base.base_str.length*/, 't', 'y', 'u', '\0' /*base.base_str.c_str*/,
-      'e'/*base.base_c*/,
+      0x00, 0x00, 0x00, 0x04/*base.str.length*/, 't', 'y', 'u', '\0' /*base.str.c_str*/,
+      'e'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
-      0x00, 0x00, 0x00, 0x04/*base.base_str.length*/, 'y', 'u', 'i', '\0' /*base.base_str.c_str*/,
-      'f'/*base.base_c*/,
+      0x00, 0x00, 0x00, 0x04/*base.str.length*/, 'y', 'u', 'i', '\0' /*base.str.c_str*/,
+      'f'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
-      0x00, 0x00, 0x00, 0x04/*base.base_str.length*/, 'u', 'i', 'o', '\0' /*base.base_str.c_str*/,
-      'g'/*base.base_c*/
+      0x00, 0x00, 0x00, 0x04/*base.str.length*/, 'u', 'i', 'o', '\0' /*base.str.c_str*/,
+      'g'/*base.c*/
       };
   bytes TDS_basic_key {
       0x00, 0x00, 0x00, 0x04/*typedef_struct.c.length*/,
-      'a'/*base.base_c*/,
-      'b'/*base.base_c*/,
-      'c'/*base.base_c*/,
-      'd'/*base.base_c*/
+      'a'/*base.c*/,
+      'b'/*base.c*/,
+      'c'/*base.c*/,
+      'd'/*base.c*/
       };
   bytes TDS_xcdr_v1_normal {
       0x7F, 0x01, 0x00, 0x08 /*typedef_struct.c.mheader (pid_list_extended + must_understand + length = 8)*/,
       0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x84 /*typedef_struct.c.mheader (extended)*/,
       0x00, 0x00, 0x00, 0x04/*typedef_struct.c.length*/,
-      0x7F, 0x01, 0x00, 0x08 /*base_str.mheader (pid_list_extended + must_understand + length = 8)*/,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 /*base_str.mheader (extended)*/,
-      0x00, 0x00, 0x00, 0x04 /*base_str.length*/, 'q', 'w', 'e', '\0' /*base.base_str.c_str*/,
-      0x40, 0x01, 0x00, 0x01 /*base_c.mheader*/,
-      'a'/*base_c*/,
+      0x7F, 0x01, 0x00, 0x08 /*base.str.mheader (pid_list_extended + must_understand + length = 8)*/,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 /*base.str.mheader (extended)*/,
+      0x00, 0x00, 0x00, 0x04 /*base.str.length*/, 'q', 'w', 'e', '\0' /*base.str.c_str*/,
+      0x40, 0x01, 0x00, 0x01 /*base.c.mheader*/,
+      'a'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x7F, 0x02, 0x00, 0x00 /*inner list termination header*/,
-      0x7F, 0x01, 0x00, 0x08 /*base_str.mheader (pid_list_extended + must_understand + length = 8)*/,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 /*base_str.mheader (extended)*/,
-      0x00, 0x00, 0x00, 0x04 /*base_str.length*/, 'w', 'e', 'r', '\0' /*base.base_str.c_str*/,
-      0x40, 0x01, 0x00, 0x01 /*base_c.mheader*/,
-      'b'/*base_c*/,
+      0x7F, 0x01, 0x00, 0x08 /*base.str.mheader (pid_list_extended + must_understand + length = 8)*/,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 /*base.str.mheader (extended)*/,
+      0x00, 0x00, 0x00, 0x04 /*base.str.length*/, 'w', 'e', 'r', '\0' /*base.str.c_str*/,
+      0x40, 0x01, 0x00, 0x01 /*base.c.mheader*/,
+      'b'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x7F, 0x02, 0x00, 0x00 /*inner list termination header*/,
-      0x7F, 0x01, 0x00, 0x08 /*base_str.mheader (pid_list_extended + must_understand + length = 8)*/,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 /*base_str.mheader (extended)*/,
-      0x00, 0x00, 0x00, 0x04 /*base_str.length*/, 'e', 'r', 't', '\0' /*base.base_str.c_str*/,
-      0x40, 0x01, 0x00, 0x01 /*base_c.mheader*/,
-      'c'/*base_c*/,
+      0x7F, 0x01, 0x00, 0x08 /*base.str.mheader (pid_list_extended + must_understand + length = 8)*/,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 /*base.str.mheader (extended)*/,
+      0x00, 0x00, 0x00, 0x04 /*base.str.length*/, 'e', 'r', 't', '\0' /*base.str.c_str*/,
+      0x40, 0x01, 0x00, 0x01 /*base.c.mheader*/,
+      'c'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x7F, 0x02, 0x00, 0x00 /*inner list termination header*/,
-      0x7F, 0x01, 0x00, 0x08 /*base_str.mheader (pid_list_extended + must_understand + length = 8)*/,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 /*base_str.mheader (extended)*/,
-      0x00, 0x00, 0x00, 0x04 /*base_str.length*/, 'r', 't', 'y', '\0' /*base.base_str.c_str*/,
-      0x40, 0x01, 0x00, 0x01 /*base_c.mheader*/,
-      'd'/*base_c*/,
+      0x7F, 0x01, 0x00, 0x08 /*base.str.mheader (pid_list_extended + must_understand + length = 8)*/,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 /*base.str.mheader (extended)*/,
+      0x00, 0x00, 0x00, 0x04 /*base.str.length*/, 'r', 't', 'y', '\0' /*base.str.c_str*/,
+      0x40, 0x01, 0x00, 0x01 /*base.c.mheader*/,
+      'd'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x7F, 0x02, 0x00, 0x00 /*inner list termination header*/,
       0x7F, 0x01, 0x00, 0x08 /*typedef_struct.l.mheader (pid_list_extended + must_understand + length = 8)*/,
       0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x64 /*typedef_struct.l.mheader (extended)*/,
       0x00, 0x00, 0x00, 0x03/*typedef_struct.l.length*/,
-      0x7F, 0x01, 0x00, 0x08 /*base_str.mheader (pid_list_extended + must_understand + length = 8)*/,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 /*base_str.mheader (extended)*/,
-      0x00, 0x00, 0x00, 0x04 /*base_str.length*/, 't', 'y', 'u', '\0' /*base.base_str.c_str*/,
-      0x40, 0x01, 0x00, 0x01 /*base_c.mheader*/,
-      'e'/*base_c*/,
+      0x7F, 0x01, 0x00, 0x08 /*base.str.mheader (pid_list_extended + must_understand + length = 8)*/,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 /*base.str.mheader (extended)*/,
+      0x00, 0x00, 0x00, 0x04 /*base.str.length*/, 't', 'y', 'u', '\0' /*base.str.c_str*/,
+      0x40, 0x01, 0x00, 0x01 /*base.c.mheader*/,
+      'e'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x7F, 0x02, 0x00, 0x00 /*inner list termination header*/,
-      0x7F, 0x01, 0x00, 0x08 /*base_str.mheader (pid_list_extended + must_understand + length = 8)*/,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 /*base_str.mheader (extended)*/,
-      0x00, 0x00, 0x00, 0x04 /*base_str.length*/, 'y', 'u', 'i', '\0' /*base.base_str.c_str*/,
-      0x40, 0x01, 0x00, 0x01 /*base_c.mheader*/,
-      'f'/*base_c*/,
+      0x7F, 0x01, 0x00, 0x08 /*base.str.mheader (pid_list_extended + must_understand + length = 8)*/,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 /*base.str.mheader (extended)*/,
+      0x00, 0x00, 0x00, 0x04 /*base.str.length*/, 'y', 'u', 'i', '\0' /*base.str.c_str*/,
+      0x40, 0x01, 0x00, 0x01 /*base.c.mheader*/,
+      'f'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x7F, 0x02, 0x00, 0x00 /*inner list termination header*/,
-      0x7F, 0x01, 0x00, 0x08 /*base_str.mheader (pid_list_extended + must_understand + length = 8)*/,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 /*base_str.mheader (extended)*/,
-      0x00, 0x00, 0x00, 0x04 /*base_str.length*/, 'u', 'i', 'o', '\0' /*base.base_str.c_str*/,
-      0x40, 0x01, 0x00, 0x01 /*base_c.mheader*/,
-      'g'/*base_c*/,
+      0x7F, 0x01, 0x00, 0x08 /*base.str.mheader (pid_list_extended + must_understand + length = 8)*/,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 /*base.str.mheader (extended)*/,
+      0x00, 0x00, 0x00, 0x04 /*base.str.length*/, 'u', 'i', 'o', '\0' /*base.str.c_str*/,
+      0x40, 0x01, 0x00, 0x01 /*base.c.mheader*/,
+      'g'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x7F, 0x02, 0x00, 0x00 /*inner list termination header*/,
       0x7F, 0x02, 0x00, 0x00 /*list termination header*/
@@ -594,56 +593,56 @@ TEST_F(CDRStreamer, cdr_typedef)
       0x00, 0x00, 0x00, 0x71 /*typedef_struct.c.emheader.nextint*/, /*4 + (21 + 4) * 4 + 3 * 3 = 113 = 0x71*/
       0x00, 0x00, 0x00, 0x04 /*typedef_struct.c.length*/,
       0x00, 0x00, 0x00, 0x15 /*base.dheader*/,
-      0x40, 0x00, 0x00, 0x00 /*base_str.emheader*/,
-      0x00, 0x00, 0x00, 0x08 /*base_str.emheader.nextint*/,
-      0x00, 0x00, 0x00, 0x04 /*base_str.length*/, 'q', 'w', 'e', '\0' /*base_str.c_str*/,
-      0x80, 0x00, 0x00, 0x01 /*base_c.emheader*/,
-      'a'/*base_c*/,
+      0x40, 0x00, 0x00, 0x00 /*base.str.emheader*/,
+      0x00, 0x00, 0x00, 0x08 /*base.str.emheader.nextint*/,
+      0x00, 0x00, 0x00, 0x04 /*base.str.length*/, 'q', 'w', 'e', '\0' /*base.str.c_str*/,
+      0x80, 0x00, 0x00, 0x01 /*base.c.emheader*/,
+      'a'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x00, 0x00, 0x00, 0x15 /*base.dheader*/,
-      0x40, 0x00, 0x00, 0x00 /*base_str.emheader*/,
-      0x00, 0x00, 0x00, 0x08 /*base_str.emheader.nextint*/,
-      0x00, 0x00, 0x00, 0x04 /*base_str.length*/, 'w', 'e', 'r', '\0' /*base_str.c_str*/,
-      0x80, 0x00, 0x00, 0x01 /*base_c.emheader*/,
-      'b'/*base_c*/,
+      0x40, 0x00, 0x00, 0x00 /*base.str.emheader*/,
+      0x00, 0x00, 0x00, 0x08 /*base.str.emheader.nextint*/,
+      0x00, 0x00, 0x00, 0x04 /*base.str.length*/, 'w', 'e', 'r', '\0' /*base.str.c_str*/,
+      0x80, 0x00, 0x00, 0x01 /*base.c.emheader*/,
+      'b'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x00, 0x00, 0x00, 0x15 /*base.dheader*/,
-      0x40, 0x00, 0x00, 0x00 /*base_str.emheader*/,
-      0x00, 0x00, 0x00, 0x08 /*base_str.emheader.nextint*/,
-      0x00, 0x00, 0x00, 0x04 /*base_str.length*/, 'e', 'r', 't', '\0' /*base_str.c_str*/,
-      0x80, 0x00, 0x00, 0x01 /*base_c.emheader*/,
-      'c'/*base_c*/,
+      0x40, 0x00, 0x00, 0x00 /*base.str.emheader*/,
+      0x00, 0x00, 0x00, 0x08 /*base.str.emheader.nextint*/,
+      0x00, 0x00, 0x00, 0x04 /*base.str.length*/, 'e', 'r', 't', '\0' /*base.str.c_str*/,
+      0x80, 0x00, 0x00, 0x01 /*base.c.emheader*/,
+      'c'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x00, 0x00, 0x00, 0x15 /*base.dheader*/,
-      0x40, 0x00, 0x00, 0x00 /*base_str.emheader*/,
-      0x00, 0x00, 0x00, 0x08 /*base_str.emheader.nextint*/,
-      0x00, 0x00, 0x00, 0x04 /*base_str.length*/, 'r', 't', 'y', '\0' /*base_str.c_str*/,
-      0x80, 0x00, 0x00, 0x01 /*base_c.emheader*/,
-      'd'/*base_c*/,
+      0x40, 0x00, 0x00, 0x00 /*base.str.emheader*/,
+      0x00, 0x00, 0x00, 0x08 /*base.str.emheader.nextint*/,
+      0x00, 0x00, 0x00, 0x04 /*base.str.length*/, 'r', 't', 'y', '\0' /*base.str.c_str*/,
+      0x80, 0x00, 0x00, 0x01 /*base.c.emheader*/,
+      'd'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x40, 0x00, 0x00, 0x01 /*typedef_struct.l.emheader*/,
       0x00, 0x00, 0x00, 0x55 /*typedef_struct.l.emheader.nextint*/, /*4 + (21 + 4) * 3 + 2 * 3 = 85 = 0x55*/
       0x00, 0x00, 0x00, 0x03 /*typedef_struct.l.length*/,
       0x00, 0x00, 0x00, 0x15 /*base.dheader*/,
-      0x40, 0x00, 0x00, 0x00 /*base_str.emheader*/,
-      0x00, 0x00, 0x00, 0x08 /*base_str.emheader.nextint*/,
-      0x00, 0x00, 0x00, 0x04 /*base_str.length*/, 't', 'y', 'u', '\0' /*base_str.c_str*/,
-      0x80, 0x00, 0x00, 0x01 /*base_c.emheader*/,
-      'e'/*base_c*/,
+      0x40, 0x00, 0x00, 0x00 /*base.str.emheader*/,
+      0x00, 0x00, 0x00, 0x08 /*base.str.emheader.nextint*/,
+      0x00, 0x00, 0x00, 0x04 /*base.str.length*/, 't', 'y', 'u', '\0' /*base.str.c_str*/,
+      0x80, 0x00, 0x00, 0x01 /*base.c.emheader*/,
+      'e'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x00, 0x00, 0x00, 0x15 /*base.dheader*/,
-      0x40, 0x00, 0x00, 0x00 /*base_str.emheader*/,
-      0x00, 0x00, 0x00, 0x08 /*base_str.emheader.nextint*/,
-      0x00, 0x00, 0x00, 0x04 /*base_str.length*/, 'y', 'u', 'i', '\0' /*base_str.c_str*/,
-      0x80, 0x00, 0x00, 0x01 /*base_c.emheader*/,
-      'f'/*base_c*/,
+      0x40, 0x00, 0x00, 0x00 /*base.str.emheader*/,
+      0x00, 0x00, 0x00, 0x08 /*base.str.emheader.nextint*/,
+      0x00, 0x00, 0x00, 0x04 /*base.str.length*/, 'y', 'u', 'i', '\0' /*base.str.c_str*/,
+      0x80, 0x00, 0x00, 0x01 /*base.c.emheader*/,
+      'f'/*base.c*/,
       0x00, 0x00, 0x00 /*padding bytes (3)*/,
       0x00, 0x00, 0x00, 0x15 /*base.dheader*/,
-      0x40, 0x00, 0x00, 0x00 /*base_str.emheader*/,
-      0x00, 0x00, 0x00, 0x08 /*base_str.emheader.nextint*/,
-      0x00, 0x00, 0x00, 0x04 /*base_str.length*/, 'u', 'i', 'o', '\0' /*base_str.c_str*/,
-      0x80, 0x00, 0x00, 0x01 /*base_c.emheader*/,
-      'g'/*base_c*/,
+      0x40, 0x00, 0x00, 0x00 /*base.str.emheader*/,
+      0x00, 0x00, 0x00, 0x08 /*base.str.emheader.nextint*/,
+      0x00, 0x00, 0x00, 0x04 /*base.str.length*/, 'u', 'i', 'o', '\0' /*base.str.c_str*/,
+      0x80, 0x00, 0x00, 0x01 /*base.c.emheader*/,
+      'g'/*base.c*/,
       };
 
   stream_deeper_test(TDS, TDS_basic_normal, TDS_basic_key, TDS_xcdr_v1_normal, TDS_basic_key, TDS_xcdr_v2_normal, TDS_basic_key)
@@ -693,7 +692,7 @@ TEST_F(CDRStreamer, cdr_union)
 TEST_F(CDRStreamer, cdr_pragma)
 {
   pragma_keys PS(sub_2(sub_1(123,234),sub_1(345,456)),sub_2(sub_1(567,678),sub_1(789,890))),
-              PS_key_test(sub_2(sub_1(0,234),sub_1(345,456)),sub_2(sub_1(0,0),sub_1(0,0)));
+              PS_key_test(sub_2(sub_1(0,234),sub_1(0,456)),sub_2(sub_1(0,678),sub_1(0,890)));
 
   bytes PS_basic_normal {
       0x00, 0x00, 0x00, 0x7B/*pragma_keys.c.s_1.l_1*/,
@@ -706,9 +705,10 @@ TEST_F(CDRStreamer, cdr_pragma)
       0x00, 0x00, 0x03, 0x7A/*pragma_keys.d.s_2.l_2*/
       };
   bytes PS_basic_key {
-      0x00, 0x00, 0x01, 0xC8/*pragma_keys.c.s_2.l_2*/,
       0x00, 0x00, 0x00, 0xEA/*pragma_keys.c.s_1.l_2*/,
-      0x00, 0x00, 0x01, 0x59/*pragma_keys.c.s_2.l_1*/,
+      0x00, 0x00, 0x01, 0xC8/*pragma_keys.c.s_2.l_2*/,
+      0x00, 0x00, 0x02, 0xA6/*pragma_keys.d.s_1.l_2*/,
+      0x00, 0x00, 0x03, 0x7A/*pragma_keys.d.s_2.l_2*/
       };
 
   VerifyRead(PS_basic_normal, PS, basic, false);
