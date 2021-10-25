@@ -73,12 +73,8 @@ void xcdr_v1_stream::skip_entity(const entity_properties_t &props)
 entity_properties_t& xcdr_v1_stream::next_entity(entity_properties_t &props, bool &firstcall)
 {
   member_list_type ml = member_list_type::member_by_seq;
-  if (m_key) {
-    if (props.keylist_is_pragma)
-      ml = member_list_type::key_by_seq;
-    else
-      ml = member_list_type::key_by_id;
-  }
+  if (m_key)
+    ml = member_list_type::key;
 
   if (m_mode != stream_mode::read)
     return next_prop(props, ml, firstcall);
@@ -100,7 +96,7 @@ entity_properties_t& xcdr_v1_stream::next_entity(entity_properties_t &props, boo
   } else {
     proplist *ptr = NULL;
     if (m_key)
-      ptr = &props.m_keys_by_id;
+      ptr = &props.m_keys;
     else
       ptr = &props.m_members_by_id;
 

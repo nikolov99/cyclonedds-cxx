@@ -92,7 +92,6 @@ struct OMG_DDS_API entity_properties
   uint32_t m_id = 0; /**< The member id of the entity, it is the global field by which the entity is identified. */
   bool must_understand = false; /**< If the reading end cannot parse a field with this header, it must discard the entire object. */
   bool implementation_extension = false;
-  bool keylist_is_pragma = false; /**< Indicates whether the keylist is #pragma*/
   bool is_last = false; /**< Indicates terminating entry for reading/writing entities, will cause the current subroutine to end and decrement the stack.*/
   bool ignore = false; /**< Indicates that this field must be ignored.*/
   bool is_optional = false; /**< Indicates that this field can be empty (length 0) for reading/writing purposes.*/
@@ -100,9 +99,8 @@ struct OMG_DDS_API entity_properties
 
   DDSCXX_WARNING_MSVC_OFF(4251)
   proplist m_members_by_seq; /**< Fields in normal streaming mode, ordered by their declaration.*/
-  proplist m_keys_by_seq; /**< Fields in key streaming mode, ordered by their declaration.*/
   proplist m_members_by_id; /**< Fields in normal streaming mode, ordered by their member id.*/
-  proplist m_keys_by_id; /**< Fields in key streaming mode, ordered by their member id.*/
+  proplist m_keys; /**< Fields in key streaming mode, ordered by their member id.*/
   DDSCXX_WARNING_MSVC_ON(4251)
 
   /**
@@ -265,9 +263,8 @@ entity_properties_t& get_type_props() {
         break;
     }
     props.m_members_by_seq.push_back(final_entry());
-    props.m_keys_by_seq.push_back(final_entry());
     props.m_members_by_id.push_back(final_entry());
-    props.m_keys_by_id.push_back(final_entry());
+    props.m_keys.push_back(final_entry());
     initialized = true;
   }
   return props;

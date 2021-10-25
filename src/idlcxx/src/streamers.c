@@ -883,7 +883,7 @@ process_member(
     // only use the @key annotations when you do not use the keylist
     if (!(pstate->flags & IDL_FLAG_KEYLIST) &&
         mem->key.value &&
-        generate_entity_properties(mem->node.parent, type_spec, streams, "props.m_keys_by_seq", declarator->id.value))
+        generate_entity_properties(mem->node.parent, type_spec, streams, "props.m_keys", declarator->id.value))
       return IDL_RETCODE_NO_MEMORY;
 
     if (process_entity(pstate, streams, declarator, type_spec, loc)
@@ -1021,21 +1021,20 @@ process_key(
     type_spec = mem->type_spec;
 
     if (i != 0
-     && putf(&streams->props, "      ptr->m_keys_by_seq.clear();\n"
-                              "      ptr->m_members_by_seq.clear();\n"
-                              "      ptr->m_keys_by_id.clear();\n"
+     && putf(&streams->props, "      ptr->m_members_by_seq.clear();\n"
+                              "      ptr->m_keys.clear();\n"
                               "      ptr->m_members_by_id.clear();\n"))
       return IDL_RETCODE_NO_MEMORY;
 
-    if (generate_entity_properties((const idl_node_t*)_struct,type_spec,streams,"  ptr->m_keys_by_seq", decl->id.value))
+    if (generate_entity_properties((const idl_node_t*)_struct,type_spec,streams,"  ptr->m_keys", decl->id.value))
       return IDL_RETCODE_NO_MEMORY;
 
     if (i != 0) {
-      if (putf(&streams->props, "      ptr->m_keys_by_seq.push_back(final_entry());\n"
-                                "      ptr = &(*(++(ptr->m_keys_by_seq.rbegin())));\n"))
+      if (putf(&streams->props, "      ptr->m_keys.push_back(final_entry());\n"
+                                "      ptr = &(*(++(ptr->m_keys.rbegin())));\n"))
         return IDL_RETCODE_NO_MEMORY;
     } else {
-      if (putf(&streams->props, "      ptr = &(*((ptr->m_keys_by_seq.rbegin())));\n"))
+      if (putf(&streams->props, "      ptr = &(*((ptr->m_keys.rbegin())));\n"))
         return IDL_RETCODE_NO_MEMORY;
     }
 
@@ -1054,9 +1053,6 @@ process_keylist(
   const idl_struct_t *_struct)
 {
   const idl_key_t *key = NULL;
-
-  if (putf(&streams->props, "    props.keylist_is_pragma = true;\n"))
-    return IDL_RETCODE_NO_MEMORY;
 
   IDL_FOREACH(key, _struct->keylist->keys) {
     if (process_key(streams, _struct, key))
@@ -1136,8 +1132,6 @@ print_switchbox_open(struct streams *streams)
 
 static idl_retcode_t
 print_constructed_type_close(
-  const idl_pstate_t* pstate,
-  const void *node,
   struct streams *streams)
 {
   static const char *fmt =
@@ -1146,21 +1140,15 @@ print_constructed_type_close(
     "}\n\n";
   static const char *pfmt =
     "    props.m_members_by_seq.push_back(final_entry());\n"
-    "    props.m_keys_by_seq.push_back(final_entry());\n"
+    "    props.m_keys.push_back(final_entry());\n"
     "    props.finish();\n"
     "    initialized = true;\n"
-    "%1$s"
     "  }\n"
     "  return props;\n"
     "}\n\n";
-  static const char *mixing_check =
-    "    assert(!props.keylist_is_pragma);\n";
 
-  bool keylist = idl_is_struct(node)
-              && (pstate->flags & IDL_FLAG_KEYLIST)
-              && ((const idl_struct_t*)node)->keylist;
   if (multi_putf(streams, ALL, fmt)
-   || putf(&streams->props, pfmt, keylist ? "" : mixing_check))
+   || putf(&streams->props, pfmt))
     return IDL_RETCODE_NO_MEMORY;
 
   return IDL_RETCODE_OK;
@@ -1264,7 +1252,7 @@ process_struct(
 
   if (revisit) {
     if (print_switchbox_close(user_data)
-     || print_constructed_type_close(pstate, node, user_data)
+     || print_constructed_type_close(user_data)
      || print_entry_point_functions(streams, fullname))
       return IDL_RETCODE_NO_MEMORY;
 
@@ -1350,7 +1338,7 @@ process_union(
       return IDL_RETCODE_NO_MEMORY;
 
     if (putf(&streams->max, pfmt)
-     || print_constructed_type_close(pstate, node, user_data))
+     || print_constructed_type_close(user_data))
       return IDL_RETCODE_NO_MEMORY;
 
     return flush(streams->generator, streams);

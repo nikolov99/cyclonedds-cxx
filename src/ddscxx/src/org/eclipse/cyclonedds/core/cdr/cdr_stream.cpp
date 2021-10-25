@@ -58,11 +58,8 @@ entity_properties_t& cdr_stream::next_prop(entity_properties_t &props, member_li
       case member_list_type::member_by_id:
         it = props.m_members_by_id.begin();
         break;
-      case member_list_type::key_by_seq:
-        it = props.m_keys_by_seq.begin();
-        break;
-      case member_list_type::key_by_id:
-        it = props.m_keys_by_id.begin();
+      case member_list_type::key:
+        it = props.m_keys.begin();
         break;
       default:
         assert(0);

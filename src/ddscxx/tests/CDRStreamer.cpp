@@ -195,15 +195,15 @@ write_test(test_struct, normal_bytes, key_bytes, stream_method)
 read_deeper_test(test_struct, normal_bytes, key_bytes, stream_method)\
 write_test(test_struct, normal_bytes, key_bytes, stream_method)
 
-#define stream_test(test_struct, cdr_normal_bytes, cdr_key_bytes, xcdr_v1_normal_bytes, xcdr_v1_key_bytes, xcdr_v2_normal_bytes, xcdr_v2_key_bytes)\
-readwrite_test(test_struct, cdr_normal_bytes, cdr_key_bytes, basic)\
-readwrite_test(test_struct, xcdr_v1_normal_bytes, xcdr_v1_key_bytes, xcdr_v1)\
-readwrite_test(test_struct, xcdr_v2_normal_bytes, xcdr_v2_key_bytes, xcdr_v2)
+#define stream_test(test_struct, cdr_normal_bytes, xcdr_v1_normal_bytes, xcdr_v2_normal_bytes, key_bytes)\
+readwrite_test(test_struct, cdr_normal_bytes, key_bytes, basic)\
+readwrite_test(test_struct, xcdr_v1_normal_bytes, key_bytes, xcdr_v1)\
+readwrite_test(test_struct, xcdr_v2_normal_bytes, key_bytes, xcdr_v2)
 
-#define stream_deeper_test(test_struct, cdr_normal_bytes, cdr_key_bytes, xcdr_v1_normal_bytes, xcdr_v1_key_bytes, xcdr_v2_normal_bytes, xcdr_v2_key_bytes)\
-readwrite_deeper_test(test_struct, cdr_normal_bytes, cdr_key_bytes, basic)\
-readwrite_deeper_test(test_struct, xcdr_v1_normal_bytes, xcdr_v1_key_bytes, xcdr_v1)\
-readwrite_deeper_test(test_struct, xcdr_v2_normal_bytes, xcdr_v2_key_bytes, xcdr_v2)
+#define stream_deeper_test(test_struct, cdr_normal_bytes, xcdr_v1_normal_bytes, xcdr_v2_normal_bytes, key_bytes)\
+readwrite_deeper_test(test_struct, cdr_normal_bytes, key_bytes, basic)\
+readwrite_deeper_test(test_struct, xcdr_v1_normal_bytes, key_bytes, xcdr_v1)\
+readwrite_deeper_test(test_struct, xcdr_v2_normal_bytes, key_bytes, xcdr_v2)
 
 /*verifying reads/writes of a basic struct*/
 
@@ -211,7 +211,7 @@ TEST_F(CDRStreamer, cdr_basic)
 {
   basicstruct BS(123456, 'g', "abcdef", 654.321);
 
-  stream_test(BS, BS_basic_normal, BS_basic_key, BS_basic_normal, BS_basic_key, BS_xcdrv2_normal, BS_basic_key)
+  stream_test(BS, BS_basic_normal, BS_basic_normal, BS_xcdrv2_normal, BS_basic_key)
 }
 
 /*verifying reads/writes of an appendable struct*/
@@ -220,7 +220,7 @@ TEST_F(CDRStreamer, cdr_appendable)
 {
   appendablestruct AS(123456, 'g', "abcdef", 654.321);
 
-  stream_test(AS, BS_basic_normal, BS_basic_key, BS_basic_normal, BS_basic_key, AS_xcdr_v2_normal, BS_basic_key)
+  stream_test(AS, BS_basic_normal, BS_basic_normal, AS_xcdr_v2_normal, BS_basic_key)
 }
 
 /*verifying reads/writes of a mutable struct*/
@@ -284,7 +284,7 @@ TEST_F(CDRStreamer, cdr_mutable)
       0x20, 0x00, 0x00, 0x07 /*mutablestruct.l.emheader*/,
       0x00, 0x01, 0xE2, 0x40 /*mutablestruct.l*/};
 
-  stream_test(MS, BS_basic_normal, BS_basic_key, MS_xcdr_v1_normal, BS_basic_key, MS_xcdr_v2_normal, BS_basic_key)
+  stream_test(MS, BS_basic_normal, MS_xcdr_v1_normal, MS_xcdr_v2_normal, BS_basic_key)
   VerifyRead(MS_xcdr_v1_normal_reordered, MS, xcdr_v1, false);
   VerifyRead(MS_xcdr_v2_normal_reordered, MS, xcdr_v2, false);
 }
@@ -362,7 +362,7 @@ TEST_F(CDRStreamer, cdr_nested)
       0xA0, 0x00, 0x00, 0x01 /*outer.c.l_inner.emheader*/,
       0x00, 0x00, 0x03, 0x15 /*outer.c.l_inner*/};
 
-  stream_test(NS, NS_basic_normal, NS_basic_key, NS_xcdr_v1_normal, NS_basic_key, NS_xcdr_v2_normal, NS_basic_key)
+  stream_test(NS, NS_basic_normal, NS_xcdr_v1_normal, NS_xcdr_v2_normal, NS_basic_key)
 }
 
 /*verifying reads/writes of a struct containing inheritance*/
@@ -416,7 +416,7 @@ TEST_F(CDRStreamer, cdr_inherited)
       'a' /*derived.c_d*/
       };
 
-  stream_test(DS, DS_basic_normal, DS_basic_key, DS_xcdr_v1_normal, DS_basic_key, DS_xcdr_v2_normal, DS_basic_key)
+  stream_test(DS, DS_basic_normal, DS_xcdr_v1_normal, DS_xcdr_v2_normal, DS_basic_key)
 }
 
 /*verifying reads/writes of a struct containing sequences*/
@@ -465,7 +465,7 @@ TEST_F(CDRStreamer, cdr_sequence)
       0x00, 0x00, 0x00, 0x04/*sequence_struct.l.length*/, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01/*sequence_struct.l.data*/
       };
 
-  stream_test(SS, SS_basic_normal, SS_basic_key, SS_xcdr_v1_normal, SS_basic_key, SS_xcdr_v2_normal, SS_basic_key)
+  stream_test(SS, SS_basic_normal, SS_xcdr_v1_normal, SS_xcdr_v2_normal, SS_basic_key)
 
   read_test(SS, SS_xcdr_v2_normal_lc_not_4, SS_basic_key, xcdr_v2)
 }
@@ -489,7 +489,7 @@ TEST_F(CDRStreamer, cdr_array)
       'e', 'd', 'c', 'b', 'a'/*array_struct.c*/
       };
 
-  stream_test(ARS, ARS_normal, ARS_key, ARS_normal, ARS_key, ARS_normal, ARS_key)
+  stream_test(ARS, ARS_normal, ARS_normal, ARS_normal, ARS_key)
 }
 
 /*verifying reads/writes of a struct containing typedefs*/
@@ -645,7 +645,7 @@ TEST_F(CDRStreamer, cdr_typedef)
       'g'/*base.c*/,
       };
 
-  stream_deeper_test(TDS, TDS_basic_normal, TDS_basic_key, TDS_xcdr_v1_normal, TDS_basic_key, TDS_xcdr_v2_normal, TDS_basic_key)
+  stream_deeper_test(TDS, TDS_basic_normal, TDS_xcdr_v1_normal, TDS_xcdr_v2_normal, TDS_basic_key)
 }
 
 /*verifying reads/writes of a struct containing unions*/
@@ -672,7 +672,7 @@ TEST_F(CDRStreamer, cdr_union)
       'a'/*union_struct.c.switch*/
       };
 
-  stream_test(US, US_normal, US_normal, US_normal, US_normal, US_normal, US_normal)
+  stream_test(US, US_normal, US_normal, US_normal, US_normal)
 
   VerifyRead(US_normal, US_k, basic, false);
   VerifyRead(US_normal, US_k, xcdr_v1, false);
@@ -754,7 +754,7 @@ TEST_F(CDRStreamer, cdr_enum)
   (void) ES_xcdr_v1_normal;
   (void) ES_xcdr_v1_key;
 
-  stream_test(ES, ES_basic_normal, ES_basic_key, ES_basic_normal, ES_basic_key, ES_basic_normal, ES_basic_key)
+  stream_test(ES, ES_basic_normal, ES_basic_normal, ES_basic_normal, ES_basic_key)
 }
 
 /*verifying reads/writes of structs containing optional fields*/

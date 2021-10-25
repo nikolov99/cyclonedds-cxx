@@ -20,7 +20,7 @@ namespace cdr {
 
 entity_properties_t& basic_cdr_stream::next_entity(entity_properties_t &props, bool &firstcall)
 {
-  auto &prop = next_prop(props, m_key ? member_list_type::key_by_seq : member_list_type::member_by_seq, firstcall);
+  auto &prop = next_prop(props, m_key ? member_list_type::key : member_list_type::member_by_seq, firstcall);
   if (prop.is_optional)
     status(unsupported_property);
   return prop;

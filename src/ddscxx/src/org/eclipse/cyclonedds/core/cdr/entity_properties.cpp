@@ -63,10 +63,9 @@ void entity_properties::print(bool recurse, size_t depth, const char *prefix) co
   }
   std::cout << std::endl;
   if (recurse) {
-    for (const auto & e:m_members_by_seq) e.print(true, depth+1, "s:member");
-    for (const auto & e:m_keys_by_seq) e.print(true, depth+1, "s:key   ");
-    for (const auto & e:m_members_by_id) e.print(true, depth+1, "i:member");
-    for (const auto & e:m_keys_by_id) e.print(true, depth+1, "i:key   ");
+    for (const auto & e:m_members_by_seq) e.print(true, depth+1, "member_s");
+    for (const auto & e:m_members_by_id) e.print(true, depth+1, "member_i");
+    for (const auto & e:m_keys) e.print(true, depth+1, "key     ");
   }
 }
 
@@ -87,14 +86,11 @@ void entity_properties::finish(bool at_root)
   for (auto &e : m_members_by_id)
     e.finish(false);
 
-  for (auto &e : m_keys_by_seq)
-    e.finish(false);
-
-  for (auto &e : m_keys_by_id)
+  for (auto &e : m_keys)
     e.finish(false);
 
   if (at_root)
-    copy_must_understand(m_keys_by_id, m_members_by_seq, m_members_by_id);
+    copy_must_understand(m_keys, m_members_by_seq, m_members_by_id);
 }
 
 void entity_properties::copy_must_understand(
@@ -114,21 +110,17 @@ void entity_properties::copy_must_understand(
 
     seq->must_understand = true;
     id->must_understand = true;
-    copy_must_understand(k.m_keys_by_id, seq->m_members_by_seq, id->m_members_by_id);
+    copy_must_understand(k.m_keys, seq->m_members_by_seq, id->m_members_by_id);
   }
 }
 
 void entity_properties::finish_keys(bool at_root)
 {
-  if (!at_root && m_keys_by_seq.size() < 2) {
-    if (m_keys_by_seq.size())
-      assert(!m_keys_by_seq.back());
-    m_keys_by_seq = m_members_by_seq;
-  }
+  if (!at_root && m_keys.size() < 2)
+    m_keys = m_members_by_seq;
 
-  for (auto & e:m_keys_by_seq) {
+  for (auto & e:m_keys) {
     e.must_understand = true;
-    e.keylist_is_pragma = keylist_is_pragma;
     e.e_ext = ext_final;
     e.p_ext = ext_final;
   }
@@ -137,7 +129,7 @@ void entity_properties::finish_keys(bool at_root)
 void entity_properties::sort_by_member_id()
 {
   m_members_by_id = sort_proplist(m_members_by_seq);
-  m_keys_by_id = sort_proplist(m_keys_by_seq);
+  m_keys = sort_proplist(m_keys);
 }
 
 proplist entity_properties::sort_proplist(
@@ -169,7 +161,7 @@ void entity_properties::merge(const entity_properties_t &other)
 
   m_members_by_seq.insert(m_members_by_seq.end(), other.m_members_by_seq.begin(), other.m_members_by_seq.end());
 
-  m_keys_by_seq.insert(m_keys_by_seq.end(), other.m_keys_by_seq.begin(), other.m_keys_by_seq.end());
+  m_keys.insert(m_keys.end(), other.m_keys.begin(), other.m_keys.end());
 }
 
 }

@@ -449,14 +449,12 @@ protected:
      *
      * @var member_list_type::member_by_seq Member entries in order of declaration.
      * @var member_list_type::member_by_id Member entries sorted by member id.
-     * @var member_list_type::key_by_seq Key entries in order of declaration.
-     * @var member_list_type::key_by_id Key entries sorted by member id.
+     * @var member_list_type::key Key entries sorted by member id.
      */
     enum class member_list_type {
       member_by_seq,
       member_by_id,
-      key_by_seq,
-      key_by_id
+      key
     };
 
     /**
