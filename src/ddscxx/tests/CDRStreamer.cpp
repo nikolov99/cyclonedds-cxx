@@ -746,15 +746,8 @@ TEST_F(CDRStreamer, cdr_enum)
       0x00, 0x02 /*enum_struct.b*/,
       0x00, 0x00, 0x00, 0x03 /*enum_struct.a*/
       };
-  bytes ES_xcdr_v1_key {
-      0x01 /*enum_struct.c*/
-      };
 
-  //currently the bit_bound field is not being parsed, so enums are written as 32-bit integers
-  (void) ES_xcdr_v1_normal;
-  (void) ES_xcdr_v1_key;
-
-  stream_test(ES, ES_basic_normal, ES_basic_normal, ES_basic_normal, ES_basic_key)
+  stream_test(ES, ES_basic_normal, ES_xcdr_v1_normal, ES_xcdr_v1_normal, ES_basic_key)
 }
 
 /*verifying reads/writes of structs containing optional fields*/

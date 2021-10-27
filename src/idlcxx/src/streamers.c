@@ -764,22 +764,16 @@ generate_entity_properties(
     }
   } else if (idl_is_enum(type_spec)) {
     const idl_enum_t *en = type_spec;
-
-    const idl_annotation_appl_t *appl = NULL;
     bb = "bb_32_bits";
-    IDL_FOREACH(appl, en->node.annotations) {
-      if (appl->annotation
-       && appl->annotation->name
-       && 0 == strcmp(appl->annotation->name->identifier,"bit_bound")) {
-        uint32_t val = 32;  //how to get the bit bound value from the annotations
-        if (val > 32)
-          bb = "bb_64_bits";
-        else if (val > 16)
-          bb = "bb_32_bits";
-        else if (val > 8)
-          bb = "bb_16_bits";
-        else
-          bb = "bb_8_bits";
+    if (en->bit_bound.annotation) {
+      if (en->bit_bound.value > 32) {
+        bb = "bb_64_bits";
+      } else if (en->bit_bound.value > 16) {
+        bb = "bb_32_bits";
+      } else if (en->bit_bound.value > 8) {
+        bb = "bb_16_bits";
+      } else {
+        bb = "bb_8_bits";
       }
     }
   }

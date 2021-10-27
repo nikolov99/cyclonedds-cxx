@@ -260,7 +260,7 @@ private:
  */
 template<typename T, std::enable_if_t<std::is_enum<T>::value && !std::is_arithmetic<T>::value, bool> = true >
 void read(xcdr_v2_stream& str, T& toread, size_t N = 1) {
-  switch (str.top_of_stack().e_bb)
+  switch (str.is_key() ? bb_32_bits : str.top_of_stack().e_bb)
   {
     case bb_8_bits:
       read_enum_impl<xcdr_v2_stream,T,uint8_t>(str, toread, N);
@@ -286,7 +286,7 @@ void read(xcdr_v2_stream& str, T& toread, size_t N = 1) {
  */
 template<typename T, std::enable_if_t<std::is_enum<T>::value && !std::is_arithmetic<T>::value, bool> = true >
 void write(xcdr_v2_stream& str, const T& towrite, size_t N = 1) {
-  switch (str.top_of_stack().e_bb)
+  switch (str.is_key() ? bb_32_bits : str.top_of_stack().e_bb)
   {
     case bb_8_bits:
       write_enum_impl<xcdr_v2_stream,T,uint8_t>(str, towrite, N);
@@ -311,7 +311,7 @@ void write(xcdr_v2_stream& str, const T& towrite, size_t N = 1) {
  */
 template<typename T, std::enable_if_t<std::is_enum<T>::value && !std::is_arithmetic<T>::value, bool> = true >
 void move(xcdr_v2_stream& str, const T&, size_t N = 1) {
-  switch (str.top_of_stack().e_bb)
+  switch (str.is_key() ? bb_32_bits : str.top_of_stack().e_bb)
   {
     case bb_8_bits:
       move(str, int8_t(0), N);
