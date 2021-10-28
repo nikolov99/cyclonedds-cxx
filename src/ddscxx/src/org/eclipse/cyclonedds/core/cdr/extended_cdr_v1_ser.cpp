@@ -79,7 +79,7 @@ entity_properties_t& xcdr_v1_stream::next_entity(entity_properties_t &props, boo
   if (m_mode != stream_mode::read)
     return next_prop(props, ml, firstcall);
 
-  if (!list_necessary(props, m_key)) {
+  if (!list_necessary(props)) {
     while (1) {  //using while loop to prevent recursive calling, which could lead to stack overflow
       auto &prop = next_prop(props, ml, firstcall);
 
@@ -120,7 +120,7 @@ entity_properties_t& xcdr_v1_stream::next_entity(entity_properties_t &props, boo
 
 bool xcdr_v1_stream::header_necessary(const entity_properties_t &props)
 {
-  return props.p_ext == ext_mutable || props.is_optional;
+  return (props.p_ext == ext_mutable || props.is_optional) && !m_key;
 }
 
 void xcdr_v1_stream::read_header(entity_properties_t &props)
@@ -204,7 +204,7 @@ void xcdr_v1_stream::finish_write_header(entity_properties_t &props)
 
 void xcdr_v1_stream::finish_struct(entity_properties_t &props)
 {
-  if (!list_necessary(props, m_key))
+  if (!list_necessary(props))
     return;
 
   switch (m_mode) {
@@ -220,9 +220,9 @@ void xcdr_v1_stream::finish_struct(entity_properties_t &props)
   }
 }
 
-bool xcdr_v1_stream::list_necessary(const entity_properties_t &props, bool as_key)
+bool xcdr_v1_stream::list_necessary(const entity_properties_t &props)
 {
-  return props.e_ext == ext_mutable && !as_key;
+  return props.e_ext == ext_mutable && !m_key;
 }
 
 void xcdr_v1_stream::write_final_list_entry()

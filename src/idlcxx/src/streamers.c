@@ -675,7 +675,6 @@ generate_entity_properties(
   const idl_node_t *parent,
   const idl_type_spec_t *type_spec,
   struct streams *streams,
-  const char *addto,
   uint32_t member_id)
 {
   if (idl_is_struct(type_spec)
@@ -686,11 +685,11 @@ generate_entity_properties(
 
     /* structs and unions need to set their properties as members through the set_member_props
      * function as they are copied from the static references of the class*/
-    if (putf(&streams->props, "    %1$s.push_back(get_type_props<%2$s>());\n"
-                              "    %1$s.back().set_member_props", addto, type))
+    if (putf(&streams->props, "    props.m_members_by_seq.push_back(get_type_props<%1$s>());\n"
+                              "    props.m_members_by_seq.back().set_member_props", type))
       return IDL_RETCODE_NO_MEMORY;
   } else {
-    if (putf(&streams->props, "    %1$s.push_back(entity_properties_t", addto))
+    if (putf(&streams->props, "    props.m_members_by_seq.push_back(entity_properties_t"))
       return IDL_RETCODE_NO_MEMORY;
   }
 
@@ -703,11 +702,11 @@ generate_entity_properties(
 
   switch (get_extensibility(parent)) {
     case IDL_APPENDABLE:
-      if (putf(&streams->props, "    %1$s.back().p_ext = ext_appendable;\n", addto))
+      if (putf(&streams->props, "    props.m_members_by_seq.back().p_ext = ext_appendable;\n"))
         return IDL_RETCODE_NO_MEMORY;
       break;
     case IDL_MUTABLE:
-      if (putf(&streams->props, "    %1$s.back().p_ext = ext_mutable;\n", addto))
+      if (putf(&streams->props, "    props.m_members_by_seq.back().p_ext = ext_mutable;\n"))
         return IDL_RETCODE_NO_MEMORY;
       break;
     default:
@@ -716,11 +715,11 @@ generate_entity_properties(
 
   switch (get_extensibility(type_spec)) {
     case IDL_APPENDABLE:
-      if (putf(&streams->props, "    %1$s.back().e_ext = ext_appendable;\n", addto))
+      if (putf(&streams->props, "    props.m_members_by_seq.back().e_ext = ext_appendable;\n"))
         return IDL_RETCODE_NO_MEMORY;
       break;
     case IDL_MUTABLE:
-      if (putf(&streams->props, "    %1$s.back().e_ext = ext_mutable;\n", addto))
+      if (putf(&streams->props, "    props.m_members_by_seq.back().e_ext = ext_mutable;\n"))
         return IDL_RETCODE_NO_MEMORY;
       break;
     default:
@@ -778,7 +777,7 @@ generate_entity_properties(
     }
   }
 
-  if (bb && putf(&streams->props, "    %1$s.back().e_bb = %2$s;\n", addto, bb))
+  if (bb && putf(&streams->props, "    props.m_members_by_seq.back().e_bb = %1$s;\n", bb))
     return IDL_RETCODE_NO_MEMORY;
 
   return IDL_RETCODE_OK;
@@ -871,13 +870,13 @@ process_member(
     if (is_optional(mem))
       loc.type |= OPTIONAL;
 
-    if (generate_entity_properties(mem->node.parent, type_spec, streams, "props.m_members_by_seq", declarator->id.value))
+    if (generate_entity_properties(mem->node.parent, type_spec, streams, declarator->id.value))
       return IDL_RETCODE_NO_MEMORY;
 
     // only use the @key annotations when you do not use the keylist
     if (!(pstate->flags & IDL_FLAG_KEYLIST) &&
         mem->key.value &&
-        generate_entity_properties(mem->node.parent, type_spec, streams, "props.m_keys", declarator->id.value))
+        putf(&streams->props, "    keylist.push_back(std::list<uint32_t>{%1$"PRIu32"});\n", declarator->id.value))
       return IDL_RETCODE_NO_MEMORY;
 
     if (process_entity(pstate, streams, declarator, type_spec, loc)
@@ -995,11 +994,8 @@ process_key(
 {
   const idl_type_spec_t *type_spec = _struct;
   const idl_declarator_t *decl = NULL;
-  static const char *fmt =
-    "    {\n"
-    "      entity_properties_t *ptr = &props;\n";
 
-  if (putf(&streams->props, fmt))
+  if (putf(&streams->props, "    keylist.push_back(std::list<uint32_t>{"))
     return IDL_RETCODE_NO_MEMORY;
 
   for (size_t i = 0; i < key->field_name->length; i++) {
@@ -1014,28 +1010,14 @@ process_key(
     const idl_member_t *mem = (const idl_member_t *)((const idl_node_t *)decl)->parent;
     type_spec = mem->type_spec;
 
-    if (i != 0
-     && putf(&streams->props, "      ptr->m_members_by_seq.clear();\n"
-                              "      ptr->m_keys.clear();\n"
-                              "      ptr->m_members_by_id.clear();\n"))
+    if (putf(&streams->props, "%1$"PRIu32, decl->id.value))
       return IDL_RETCODE_NO_MEMORY;
-
-    if (generate_entity_properties((const idl_node_t*)_struct,type_spec,streams,"  ptr->m_keys", decl->id.value))
+    if (i < key->field_name->length-1 &&
+        putf(&streams->props, ", ", decl->id.value))
       return IDL_RETCODE_NO_MEMORY;
-
-    if (i != 0) {
-      if (putf(&streams->props, "      ptr->m_keys.push_back(final_entry());\n"
-                                "      ptr = &(*(++(ptr->m_keys.rbegin())));\n"))
-        return IDL_RETCODE_NO_MEMORY;
-    } else {
-      if (putf(&streams->props, "      ptr = &(*((ptr->m_keys.rbegin())));\n"))
-        return IDL_RETCODE_NO_MEMORY;
-    }
-
-    _struct = type_spec;
   }
 
-  if (putf(&streams->props, "    }\n"))
+  if (putf(&streams->props, "});\n"))
     return IDL_RETCODE_NO_MEMORY;
 
   return IDL_RETCODE_OK;
@@ -1073,7 +1055,8 @@ print_constructed_type_open(struct streams *streams, const idl_node_t *node)
     " {\n"
     "  thread_local static bool initialized = false;\n"
     "  thread_local static entity_properties_t props;\n"
-    "  if (!initialized) {\n";
+    "  if (!initialized) {\n"
+    "    std::list<std::list<uint32_t> > keylist;\n";
   static const char *sfmt =
     "  streamer.start_struct(props);\n";
 
@@ -1135,7 +1118,7 @@ print_constructed_type_close(
   static const char *pfmt =
     "    props.m_members_by_seq.push_back(final_entry());\n"
     "    props.m_keys.push_back(final_entry());\n"
-    "    props.finish();\n"
+    "    props.finish(keylist);\n"
     "    initialized = true;\n"
     "  }\n"
     "  return props;\n"

@@ -206,11 +206,10 @@ private:
    * Checks whether a D-header is necessary for the indicated entity.
    *
    * @param[in] props The entity whose properties to check.
-   * @param[in] as_key If this is to be treated as just the key stream representation.
    *
    * @return Whether the entity props needs a D-header
    */
-  static bool d_header_necessary(const entity_properties_t &props, bool as_key);
+  bool d_header_necessary(const entity_properties_t &props);
 
   /**
    * @brief
@@ -220,7 +219,7 @@ private:
    *
    * @return Whether the entity props needs a EM-header
    */
-  static bool em_header_necessary(const entity_properties_t &props);
+  bool em_header_necessary(const entity_properties_t &props);
 
   /**
    * @brief
@@ -230,11 +229,10 @@ private:
    * to read em headers from the stream.
    *
    * @param[in] props The entity whose members might be represented by a parameter list.
-   * @param[in] as_key If this is to be treated as just the key stream representation.
    *
    * @return Whether a list is necessary for this entity.
    */
-  static bool list_necessary(const entity_properties_t &props, bool as_key);
+  bool list_necessary(const entity_properties_t &props);
 
   /**
    * @brief

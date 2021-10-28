@@ -126,16 +126,15 @@ private:
    *
    * @return Whether a header is necessary for the entity.
    */
-  static bool header_necessary(const entity_properties_t &props);
+  bool header_necessary(const entity_properties_t &props);
 
   /**
    * @brief
    * Determines whether a parameter list is necessary.
    *
    * @param[in] props The entity whose members might be represented by a parameter list.
-   * @param[in] as_key If this is to be treated as just the key stream representation.
    */
-  static bool list_necessary(const entity_properties_t &props, bool as_key);
+  bool list_necessary(const entity_properties_t &props);
 
   /**
    * @brief

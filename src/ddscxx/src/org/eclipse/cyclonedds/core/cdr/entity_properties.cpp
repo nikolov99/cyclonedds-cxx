@@ -35,7 +35,7 @@ void entity_properties::print(bool recurse, size_t depth, const char *prefix) co
 {
   std::cout << "d: " << depth;
   for (size_t i = 0; i < depth; i++) std::cout << "  ";
-  std::cout << prefix << ": m_id: " << m_id << " final: " << (is_last ? "yes" : "no");
+  std::cout << prefix << ": m_id: " << m_id << " final: " << (is_last ? "yes" : "no") << " m_u: " << (must_understand ? "yes" : "no") << " key: " << (is_key ? "yes" : "no");
 
   std::cout << " p_ext: ";
   switch(p_ext) {
@@ -75,93 +75,93 @@ void entity_properties::set_member_props(uint32_t member_id, bool optional)
   is_optional = optional;
 }
 
-void entity_properties::finish(bool at_root)
+void entity_properties::finish(const std::list<std::list<uint32_t> > &keyindices)
 {
-  finish_keys(at_root);
-  sort_by_member_id();
-
-  for (auto &e : m_members_by_seq)
-    e.finish(false);
-
-  for (auto &e : m_members_by_id)
-    e.finish(false);
-
-  for (auto &e : m_keys)
-    e.finish(false);
-
-  if (at_root)
-    copy_must_understand(m_keys, m_members_by_seq, m_members_by_id);
-}
-
-void entity_properties::copy_must_understand(
-  const proplist &keys_by_id,
-  proplist &members_by_seq,
-  proplist &members_by_id)
-{
-  for (const auto & k:keys_by_id) {
-    if (!k)
-      continue;
-
-    assert(k.must_understand);
-
-    auto seq = std::find(members_by_seq.begin(), members_by_seq.end(), k);
-    auto id = std::find(members_by_id.begin(), members_by_id.end(), k);
-    assert(seq != members_by_seq.end() && id != members_by_id.end());
-
-    seq->must_understand = true;
-    id->must_understand = true;
-    copy_must_understand(k.m_keys, seq->m_members_by_seq, id->m_members_by_id);
-  }
-}
-
-void entity_properties::finish_keys(bool at_root)
-{
-  if (!at_root && m_keys.size() < 2)
-    m_keys = m_members_by_seq;
-
-  for (auto & e:m_keys) {
-    e.must_understand = true;
-    e.e_ext = ext_final;
-    e.p_ext = ext_final;
-  }
-}
-
-void entity_properties::sort_by_member_id()
-{
-  m_members_by_id = sort_proplist(m_members_by_seq);
-  m_keys = sort_proplist(m_keys);
-}
-
-proplist entity_properties::sort_proplist(
-  const proplist &in)
-{
-  auto out = in;
-  out.sort(member_id_comp);
-
-  if (out.size()) {
-    auto it2 = out.begin();
-    auto it = it2++;
-
-    while (it2 != out.end()) {
-      if (it2->m_id == it->m_id && it2->is_last == it->is_last) {
-        it->merge(*it2);
-        it2 = out.erase(it2);
-      } else {
-        it = it2++;
-      }
+  //set the is_key flag on the members in keyindices
+  for (const auto &key:keyindices) {
+    proplist *ptr = &m_members_by_seq;
+    for (const auto &index:key) {
+      auto it = std::find(ptr->begin(), ptr->end(), entity_properties(index));
+      assert(it != ptr->end());
+      it->is_key = true;
+      it->must_understand = true;
+      ptr = &it->m_members_by_seq;
     }
   }
 
-  return out;
+  for (auto &member:m_members_by_seq) {
+    member.propagate_flags();
+  }
+
+  populate_from_seq();
+
+  trim_non_key_members();
 }
 
-void entity_properties::merge(const entity_properties_t &other)
+void entity_properties::trim_non_key_members()
 {
-  assert(other.m_id == m_id && other.is_last == is_last);
+  if (m_keys.empty())
+    return;
 
-  m_members_by_seq.insert(m_members_by_seq.end(), other.m_members_by_seq.begin(), other.m_members_by_seq.end());
+  auto it = m_keys.begin();
+  while (*it) {
+    if (it->is_key) {
+      it->trim_non_key_members();
+      it++;
+    } else {
+      it = m_keys.erase(it);
+    }
+  }
+}
 
-  m_keys.insert(m_keys.end(), other.m_keys.begin(), other.m_keys.end());
+void entity_properties::propagate_flags()
+{
+  if (!is_key)
+    return;
+
+  bool any_member_is_key = false;
+  for (const auto &member:m_members_by_seq) {
+    if (member.is_key)
+      any_member_is_key = true;
+  }
+
+  for (auto &member:m_members_by_seq) {
+    if (!any_member_is_key) {
+      member.is_key = true;
+      member.must_understand = true;
+    }
+
+    member.propagate_flags();
+  }
+}
+
+void entity_properties::populate_from_seq(keep_in_propagate to_keep)
+{
+  m_members_by_id = m_members_by_seq;
+  m_members_by_id.sort(member_id_comp);
+  m_keys = m_members_by_id;
+
+  if (to_keep & members_by_seq) {
+    for (auto &member:m_members_by_seq)
+      member.populate_from_seq(members_by_seq);
+  } else {
+    m_members_by_seq.clear();
+  }
+
+  if (to_keep & members_by_id) {
+    for (auto &member:m_members_by_id)
+      member.populate_from_seq(members_by_id);
+  } else {
+    m_members_by_id.clear();
+  }
+
+  if (to_keep & keys) {
+    for (auto &member:m_keys)
+      member.populate_from_seq(keys);
+  } else {
+    m_keys.clear();
+  }
+
 }
 
 }

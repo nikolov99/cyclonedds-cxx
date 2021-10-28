@@ -95,6 +95,7 @@ struct OMG_DDS_API entity_properties
   bool is_last = false; /**< Indicates terminating entry for reading/writing entities, will cause the current subroutine to end and decrement the stack.*/
   bool ignore = false; /**< Indicates that this field must be ignored.*/
   bool is_optional = false; /**< Indicates that this field can be empty (length 0) for reading/writing purposes.*/
+  bool is_key = false; /**< Indicates that this field is a key field.*/
   bit_bound e_bb = bb_unset; /**< The minimum number of bytes necessary to represent this entity/bitmask.*/
 
   DDSCXX_WARNING_MSVC_OFF(4251)
@@ -142,12 +143,11 @@ struct OMG_DDS_API entity_properties
    * @brief
    * Finishing function.
    *
-   * Calls populate_empty_keys() and sort_by_member_id().
-   * Calls itself recursively on all property lists contained within, setting at_root to false.
+   * Generates the m_members_by_id and m_keys from m_members_by_seq and the supplied indices.
    *
-   * @param[in] at_root Whether this function is called on the entity itself, or a member of another entity.
+   * @param[in] keyindices The indices of members which are keys.
    */
-  void finish(bool at_root = true);
+  void finish(const std::list<std::list<uint32_t> > &keyindices);
 
   /**
    * @brief
@@ -179,62 +179,52 @@ private:
 
   /**
    * @brief
-   * Entity property list sorting function.
+   * Non-key member trimming function.
    *
-   * Sorts the contents of a list and merges duplicate entries.
-   *
-   * @param[in] in The list to sort.
-   *
-   * @return The sorted contents of in.
+   * Removes entries from the list of key members which do not have the is_key flag set.
+   * This is called recursively on all members of the key list m_keys.
    */
-  static proplist sort_proplist(const proplist &in);
+  void trim_non_key_members();
 
   /**
    * @brief
-   * Creates member ordered lists from the sequence ordered lists.
+   * must_understand and is_key flag propagation function.
+   *
+   * Will set the is_key and must_understand flag on all members of entities which are themselves
+   * keys but themselves have no key members, indicating that the key stream for a this member is
+   * all members of this entity.
+   * This is called recursively on all members.
    */
-  void sort_by_member_id();
+  void propagate_flags();
+
+  /**
+   * @brief Represents which representations to keep in the function populate_from_seq.
+   *
+   * Used to remove unnecessary branches in the entity_properties tree.
+   *
+   * @var keep_in_propagate::all Keep all representations (only used at root level).
+   * @var keep_in_propagate::members_by_seq Keep only the m_members_by_seq representation.
+   * @var keep_in_propagate::members_by_id Keep only the m_members_by_id representation.
+   * @var keep_in_propagate::keys Keep only the m_keys representation.
+   */
+  enum keep_in_propagate {
+    members_by_seq = 1,
+    members_by_id = 2,
+    keys = 4,
+    all = members_by_seq+members_by_id+keys
+  };
 
   /**
    * @brief
-   * Finishes the list of key entries.
+   * Other representations population function.
    *
-   * This function is preparation for the sort_by_member_id function.
-   * For non-root structures, if the key list is empty (only containing a final entry or none), the key
-   * list is populated with the member list.
-   * All key list entries are set to must_understand is true, and their (parent)extensibility set to final.
+   * Generates the m_members_by_id and m_keys representations from m_members_by_seq.
+   * Will discard unnecessary representations as indicated by to_keep.
+   * Is called recursively on all representations which are kept.
    *
-   * @param[in] at_root Whether the current call is being done on the entity itself or one of its members.
+   * @param[in] to_keep Which representations to keep.
    */
-  void finish_keys(bool at_root);
-
-  /**
-   * @brief
-   * Merges the contents of one entity into this one.
-   *
-   * The contents of the member and key list are appended to their counterparts in this object.
-   * This function should be followed by a call to sort_by_member_id to remove duplicate entries.
-   *
-   * @param[in] other The entity whose contents are to be merged into this one.
-   */
-  void merge(const entity_properties_t &other);
-
-  /**
-   * @brief
-   * Sets the must_understand flags from key list on member lists.
-   *
-   * Takes entities in keys_by_id and sets the must_understand flag on the matching entities in
-   * members_by_seq and members_by_id. Then calls this function on the sublists for the matching
-   * entities.
-   *
-   * @param[in] keys_by_id The list of keys to match in member lists.
-   * @param[in, out] members_by_seq The list members by sequence id to set the must understand flag on.
-   * @param[in, out] members_by_id The list members by member id to set the must understand flag on.
-   */
-  void copy_must_understand(
-    const proplist &keys_by_id,
-    proplist &members_by_seq,
-    proplist &members_by_id);
+  void populate_from_seq(keep_in_propagate to_keep = all);
 };
 
 struct OMG_DDS_API final_entry: public entity_properties_t {
