@@ -15,6 +15,7 @@
 #include <dds/core/macros.hpp>
 #include <cstdint>
 #include <list>
+#include <map>
 
 namespace org {
 namespace eclipse {
@@ -65,6 +66,18 @@ enum extensibility {
 
 typedef struct entity_properties entity_properties_t;
 typedef std::list<entity_properties_t> proplist;
+
+/**
+ * @brief
+ * Helper struct to keep track of key endpoints of the a struct
+ */
+DDSCXX_WARNING_MSVC_OFF(4251)
+class OMG_DDS_API key_endpoint: public std::map<uint32_t, key_endpoint> {
+DDSCXX_WARNING_MSVC_ON(4251)
+  public:
+    void add_key_endpoint(const std::list<uint32_t> &key_indices);
+    operator bool() const {return !empty();}
+};
 
 /**
  * @brief
@@ -145,9 +158,9 @@ struct OMG_DDS_API entity_properties
    *
    * Generates the m_members_by_id and m_keys from m_members_by_seq and the supplied indices.
    *
-   * @param[in] keyindices The indices of members which are keys.
+   * @param[in] keys The indices of members which are keys.
    */
-  void finish(const std::list<std::list<uint32_t> > &keyindices);
+  void finish(const key_endpoint &keys);
 
   /**
    * @brief
@@ -225,6 +238,14 @@ private:
    * @param[in] to_keep Which representations to keep.
    */
   void populate_from_seq(keep_in_propagate to_keep = all);
+
+  /**
+   * @brief
+   * Overwrites the existing key values.
+   *
+   * @param[in] endpoints A tree of indices indicating the which (sub)members are keys.
+   */
+  void set_key_values(const key_endpoint &endpoints);
 };
 
 struct OMG_DDS_API final_entry: public entity_properties_t {

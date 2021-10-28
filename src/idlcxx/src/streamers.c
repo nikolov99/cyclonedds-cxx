@@ -876,7 +876,7 @@ process_member(
     // only use the @key annotations when you do not use the keylist
     if (!(pstate->flags & IDL_FLAG_KEYLIST) &&
         mem->key.value &&
-        putf(&streams->props, "    keylist.push_back(std::list<uint32_t>{%1$"PRIu32"});\n", declarator->id.value))
+        putf(&streams->props, "    keylist.add_key_endpoint(std::list<uint32_t>{%1$"PRIu32"});\n", declarator->id.value))
       return IDL_RETCODE_NO_MEMORY;
 
     if (process_entity(pstate, streams, declarator, type_spec, loc)
@@ -995,7 +995,7 @@ process_key(
   const idl_type_spec_t *type_spec = _struct;
   const idl_declarator_t *decl = NULL;
 
-  if (putf(&streams->props, "    keylist.push_back(std::list<uint32_t>{"))
+  if (putf(&streams->props, "    keylist.add_key_endpoint(std::list<uint32_t>{"))
     return IDL_RETCODE_NO_MEMORY;
 
   for (size_t i = 0; i < key->field_name->length; i++) {
@@ -1056,7 +1056,7 @@ print_constructed_type_open(struct streams *streams, const idl_node_t *node)
     "  thread_local static bool initialized = false;\n"
     "  thread_local static entity_properties_t props;\n"
     "  if (!initialized) {\n"
-    "    std::list<std::list<uint32_t> > keylist;\n";
+    "    key_endpoint keylist;\n";
   static const char *sfmt =
     "  streamer.start_struct(props);\n";
 

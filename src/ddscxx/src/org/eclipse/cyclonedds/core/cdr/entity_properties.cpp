@@ -75,23 +75,49 @@ void entity_properties::set_member_props(uint32_t member_id, bool optional)
   is_optional = optional;
 }
 
-void entity_properties::finish(const std::list<std::list<uint32_t> > &keyindices)
+void key_endpoint::add_key_endpoint(const std::list<uint32_t> &key_indices)
 {
-  //set the is_key flag on the members in keyindices
-  for (const auto &key:keyindices) {
-    proplist *ptr = &m_members_by_seq;
-    for (const auto &index:key) {
-      auto it = std::find(ptr->begin(), ptr->end(), entity_properties(index));
-      assert(it != ptr->end());
-      it->is_key = true;
-      it->must_understand = true;
-      ptr = &it->m_members_by_seq;
+  auto *ptr = this;
+  for (const auto &key_index:key_indices) {
+    auto it = ptr->find(key_index);
+    if (it != ptr->end()) {
+      ptr = &(it->second);
+    } else {
+      auto p = ptr->insert({key_index,key_endpoint()});
+      assert(p.second);
+      ptr = &(p.first->second);
     }
   }
+}
 
+void entity_properties::set_key_values(const key_endpoint &endpoints)
+{
+  if (!endpoints)
+    return;
+
+  //there are key members for this entity, therefore erase all existing key member information
   for (auto &member:m_members_by_seq) {
-    member.propagate_flags();
+    member.is_key = false;
+    member.must_understand = false;
   }
+
+  //look for all indicated key members, and set their key values
+  for (const auto &p:endpoints) {
+    auto it = std::find(m_members_by_seq.begin(), m_members_by_seq.end(), entity_properties(p.first));
+    assert(it != m_members_by_seq.end());
+
+    it->is_key = true;
+    it->must_understand = true;
+    it->set_key_values(p.second);
+  }
+}
+
+void entity_properties::finish(const key_endpoint &keys)
+{
+  set_key_values(keys);
+
+  for (auto &member:m_members_by_seq)
+    member.propagate_flags();
 
   populate_from_seq();
 
