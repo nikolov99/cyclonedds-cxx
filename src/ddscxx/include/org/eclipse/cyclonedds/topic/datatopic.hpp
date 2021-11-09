@@ -17,6 +17,7 @@
 #include <cstring>
 #include <vector>
 #include <atomic>
+#include <limits>
 
 #include "dds/ddsrt/endian.h"
 #include "dds/ddsrt/md5.h"
@@ -725,7 +726,7 @@ size_t sertype_get_serialized_size(const ddsi_sertype*, const void * sample)
 
   // get the serialized size of the sample (with out serializing)
   org::eclipse::cyclonedds::core::cdr::basic_cdr_stream str;
-  move(str, msg);
+  move(str, msg, false);
 
   if (str.abort_status()) {
     // the max value is treated as an error in the Cyclone core
@@ -754,7 +755,7 @@ bool sertype_serialize_into(const ddsi_sertype*,
   org::eclipse::cyclonedds::core::cdr::basic_cdr_stream str;
   // TODO(Sumanth), considering the header offset
   str.set_buffer(calc_offset(dst_buffer, 4));
-  write(str, msg);
+  write(str, msg, false);
 
   return !str.abort_status();
 }
