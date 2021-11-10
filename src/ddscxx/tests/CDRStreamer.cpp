@@ -25,15 +25,6 @@ typedef std::vector<unsigned char> bytes;
 class CDRStreamer : public ::testing::Test
 {
 public:
-    enum stream_type {
-      basic,
-      xcdr_v1,
-      xcdr_v2
-    };
-
-    basic_cdr_stream b;
-    xcdr_v1_stream x_1;
-    xcdr_v2_stream x_2;
 
     bytes BS_basic_normal {
         0x00, 0x01, 0xE2, 0x40 /*basicstruct.l*/,
@@ -61,21 +52,9 @@ public:
         0x00 /*padding bytes (1)*/,
         0x40, 0x84, 0x72, 0x91, 0x68, 0x72, 0xB0, 0x21 /*appendablestruct.d*/};
 
-    CDRStreamer() :
-        b(endianness::big_endian),
-        x_1(endianness::big_endian),
-        x_2(endianness::big_endian)
+    CDRStreamer()
     {
     }
-
-    template<typename T>
-    void VerifyWrite(const T& in, const bytes &out, stream_type stream, bool as_key);
-
-    template<typename T>
-    void VerifyRead(const bytes &in, const T& out, stream_type stream, bool as_key);
-
-    template<typename T>
-    void VerifyReadOneDeeper(const bytes &in, const T& out, stream_type stream, bool as_key);
 
     void SetUp() { }
 
@@ -83,62 +62,27 @@ public:
 
 };
 
-template<typename T>
-void CDRStreamer::VerifyWrite(const T& in, const bytes &out, stream_type stream, bool as_key)
+template<typename T, typename S>
+void VerifyWrite(const T& in, const bytes &out, S stream, bool as_key)
 {
   bytes buffer;
-  switch (stream) {
-    case basic:
-      move(b, in, as_key);
-      ASSERT_EQ(b.status(),0);
-      buffer.resize(b.position());
-      b.set_buffer(buffer.data(), buffer.size());
-      write(b, in, as_key);
-      ASSERT_EQ(b.status(),0);
-      break;
-    case xcdr_v1:
-      move(x_1, in, as_key);
-      ASSERT_EQ(x_1.status(),0);
-      buffer.resize(x_1.position());
-      x_1.set_buffer(buffer.data(), buffer.size());
-      write(x_1, in, as_key);
-      ASSERT_EQ(x_1.status(),0);
-      break;
-    case xcdr_v2:
-      move(x_2, in, as_key);
-      ASSERT_EQ(x_2.status(),0);
-      buffer.resize(x_2.position());
-      x_2.set_buffer(buffer.data(), buffer.size());
-      write(x_2, in, as_key);
-      ASSERT_EQ(x_2.status(),0);
-      break;
-  }
-
+  move(stream, in, as_key);
+  ASSERT_EQ(stream.status(),0);
+  buffer.resize(stream.position());
+  stream.set_buffer(buffer.data(), buffer.size());
+  write(stream, in, as_key);
+  ASSERT_EQ(stream.status(),0);
   ASSERT_EQ(buffer, out);
 }
 
-template<typename T>
-void CDRStreamer::VerifyRead(const bytes &in, const T& out, stream_type stream, bool as_key)
+template<typename T, typename S>
+void VerifyRead(const bytes &in, const T& out, S stream, bool as_key)
 {
   bytes incopy(in);
   T buffer;
-  switch (stream) {
-    case basic:
-      b.set_buffer(incopy.data(), incopy.size());
-      read(b, buffer, as_key);
-      ASSERT_EQ(b.status(),0);
-      break;
-    case xcdr_v1:
-      x_1.set_buffer(incopy.data(), incopy.size());
-      read(x_1, buffer, as_key);
-      ASSERT_EQ(x_1.status(),0);
-      break;
-    case xcdr_v2:
-      x_2.set_buffer(incopy.data(), incopy.size());
-      read(x_2, buffer, as_key);
-      ASSERT_EQ(x_2.status(),0);
-      break;
-  }
+  stream.set_buffer(incopy.data(), incopy.size());
+  read(stream, buffer, as_key);
+  ASSERT_EQ(stream.status(),0);
 
   if (as_key)
     ASSERT_EQ(buffer.c(), out.c());
@@ -146,25 +90,15 @@ void CDRStreamer::VerifyRead(const bytes &in, const T& out, stream_type stream, 
     ASSERT_EQ(buffer, out);
 }
 
-template<typename T>
-void CDRStreamer::VerifyReadOneDeeper(const bytes &in, const T& out, stream_type stream, bool as_key)
+template<typename T, typename S>
+void VerifyReadOneDeeper(const bytes &in, const T& out, S stream, bool as_key)
 {
   bytes incopy(in);
   T buffer;
-  switch (stream) {
-    case basic:
-      b.set_buffer(incopy.data(), incopy.size());
-      read(b, buffer, as_key);
-      break;
-    case xcdr_v1:
-      x_1.set_buffer(incopy.data(), incopy.size());
-      read(x_1, buffer, as_key);
-      break;
-    case xcdr_v2:
-      x_2.set_buffer(incopy.data(), incopy.size());
-      read(x_2, buffer, as_key);
-      break;
-  }
+
+  stream.set_buffer(incopy.data(), incopy.size());
+  read(stream, buffer, as_key);
+  ASSERT_EQ(stream.status(),0);
 
   if (as_key) {
     ASSERT_EQ(buffer.c().size(), out.c().size());
@@ -175,35 +109,35 @@ void CDRStreamer::VerifyReadOneDeeper(const bytes &in, const T& out, stream_type
   }
 }
 
-#define read_test(test_struct, normal_bytes, key_bytes, stream_method)\
-VerifyRead(normal_bytes, test_struct, stream_method, false);\
-VerifyRead(key_bytes, test_struct, stream_method, true);
+#define read_test(test_struct, normal_bytes, key_bytes, streamer)\
+VerifyRead(normal_bytes, test_struct, streamer, false);\
+VerifyRead(key_bytes, test_struct, streamer, true);
 
-#define read_deeper_test(test_struct, normal_bytes, key_bytes, stream_method)\
-VerifyRead(normal_bytes, test_struct, stream_method, false);\
-VerifyReadOneDeeper(key_bytes, test_struct, stream_method, true);
+#define read_deeper_test(test_struct, normal_bytes, key_bytes, streamer)\
+VerifyRead(normal_bytes, test_struct, streamer, false);\
+VerifyReadOneDeeper(key_bytes, test_struct, streamer, true);
 
-#define write_test(test_struct, normal_bytes, key_bytes, stream_method)\
-VerifyWrite(test_struct, normal_bytes, stream_method, false);\
-VerifyWrite(test_struct, key_bytes, stream_method, true);
+#define write_test(test_struct, normal_bytes, key_bytes, streamer)\
+VerifyWrite(test_struct, normal_bytes, streamer, false);\
+VerifyWrite(test_struct, key_bytes, streamer, true);
 
-#define readwrite_test(test_struct, normal_bytes, key_bytes, stream_method)\
-read_test(test_struct, normal_bytes, key_bytes, stream_method)\
-write_test(test_struct, normal_bytes, key_bytes, stream_method)
+#define readwrite_test(test_struct, normal_bytes, key_bytes, streamer)\
+read_test(test_struct, normal_bytes, key_bytes, streamer)\
+write_test(test_struct, normal_bytes, key_bytes, streamer)
 
-#define readwrite_deeper_test(test_struct, normal_bytes, key_bytes, stream_method)\
-read_deeper_test(test_struct, normal_bytes, key_bytes, stream_method)\
-write_test(test_struct, normal_bytes, key_bytes, stream_method)
+#define readwrite_deeper_test(test_struct, normal_bytes, key_bytes, streamer)\
+read_deeper_test(test_struct, normal_bytes, key_bytes, streamer)\
+write_test(test_struct, normal_bytes, key_bytes, streamer)
 
 #define stream_test(test_struct, cdr_normal_bytes, xcdr_v1_normal_bytes, xcdr_v2_normal_bytes, key_bytes)\
-readwrite_test(test_struct, cdr_normal_bytes, key_bytes, basic)\
-readwrite_test(test_struct, xcdr_v1_normal_bytes, key_bytes, xcdr_v1)\
-readwrite_test(test_struct, xcdr_v2_normal_bytes, key_bytes, xcdr_v2)
+readwrite_test(test_struct, cdr_normal_bytes, key_bytes, basic_cdr_stream(endianness::big_endian))\
+readwrite_test(test_struct, xcdr_v1_normal_bytes, key_bytes, xcdr_v1_stream(endianness::big_endian))\
+readwrite_test(test_struct, xcdr_v2_normal_bytes, key_bytes, xcdr_v2_stream(endianness::big_endian))
 
 #define stream_deeper_test(test_struct, cdr_normal_bytes, xcdr_v1_normal_bytes, xcdr_v2_normal_bytes, key_bytes)\
-readwrite_deeper_test(test_struct, cdr_normal_bytes, key_bytes, basic)\
-readwrite_deeper_test(test_struct, xcdr_v1_normal_bytes, key_bytes, xcdr_v1)\
-readwrite_deeper_test(test_struct, xcdr_v2_normal_bytes, key_bytes, xcdr_v2)
+readwrite_deeper_test(test_struct, cdr_normal_bytes, key_bytes, basic_cdr_stream(endianness::big_endian))\
+readwrite_deeper_test(test_struct, xcdr_v1_normal_bytes, key_bytes, xcdr_v1_stream(endianness::big_endian))\
+readwrite_deeper_test(test_struct, xcdr_v2_normal_bytes, key_bytes, xcdr_v2_stream(endianness::big_endian))
 
 /*verifying streamer will not read/write beyond the end of the indicated buffer*/
 
@@ -322,8 +256,8 @@ TEST_F(CDRStreamer, cdr_mutable)
       0x00, 0x01, 0xE2, 0x40 /*mutablestruct.l*/};
 
   stream_test(MS, BS_basic_normal, MS_xcdr_v1_normal, MS_xcdr_v2_normal, BS_basic_key)
-  VerifyRead(MS_xcdr_v1_normal_reordered, MS, xcdr_v1, false);
-  VerifyRead(MS_xcdr_v2_normal_reordered, MS, xcdr_v2, false);
+  VerifyRead(MS_xcdr_v1_normal_reordered, MS, xcdr_v1_stream(endianness::big_endian), false);
+  VerifyRead(MS_xcdr_v2_normal_reordered, MS, xcdr_v2_stream(endianness::big_endian), false);
 }
 
 /*verifying reads/writes of a nested struct*/
@@ -504,7 +438,7 @@ TEST_F(CDRStreamer, cdr_sequence)
 
   stream_test(SS, SS_basic_normal, SS_xcdr_v1_normal, SS_xcdr_v2_normal, SS_basic_key)
 
-  read_test(SS, SS_xcdr_v2_normal_lc_not_4, SS_basic_key, xcdr_v2)
+  read_test(SS, SS_xcdr_v2_normal_lc_not_4, SS_basic_key, xcdr_v2_stream(endianness::big_endian))
 }
 
 /*verifying reads/writes of a struct containing arrays*/
@@ -711,17 +645,17 @@ TEST_F(CDRStreamer, cdr_union)
 
   stream_test(US, US_normal, US_normal, US_normal, US_normal)
 
-  VerifyRead(US_normal, US_k, basic, false);
-  VerifyRead(US_normal, US_k, xcdr_v1, false);
-  VerifyRead(US_normal, US_k, xcdr_v2, false);
+  VerifyRead(US_normal, US_k, basic_cdr_stream(endianness::big_endian), false);
+  VerifyRead(US_normal, US_k, xcdr_v1_stream(endianness::big_endian), false);
+  VerifyRead(US_normal, US_k, xcdr_v2_stream(endianness::big_endian), false);
 
-  VerifyRead(US_k_key, US_k_read, basic, true);
-  VerifyRead(US_k_key, US_k_read, xcdr_v1, true);
-  VerifyRead(US_k_key, US_k_read, xcdr_v2, true);
+  VerifyRead(US_k_key, US_k_read, basic_cdr_stream(endianness::big_endian), true);
+  VerifyRead(US_k_key, US_k_read, xcdr_v1_stream(endianness::big_endian), true);
+  VerifyRead(US_k_key, US_k_read, xcdr_v2_stream(endianness::big_endian), true);
 
-  write_test(US_k, US_normal, US_k_key, basic)
-  write_test(US_k, US_normal, US_k_key, xcdr_v1)
-  write_test(US_k, US_normal, US_k_key, xcdr_v2)
+  write_test(US_k, US_normal, US_k_key, basic_cdr_stream(endianness::big_endian))
+  write_test(US_k, US_normal, US_k_key, xcdr_v1_stream(endianness::big_endian))
+  write_test(US_k, US_normal, US_k_key, xcdr_v2_stream(endianness::big_endian))
 }
 
 /*verifying reads/writes of structs using pragma keylist*/
@@ -748,17 +682,17 @@ TEST_F(CDRStreamer, cdr_pragma)
       0x00, 0x00, 0x03, 0x7A/*pragma_keys.d.s_2.l_2*/
       };
 
-  VerifyRead(PS_basic_normal, PS, basic, false);
-  VerifyRead(PS_basic_normal, PS, xcdr_v1, false);
-  VerifyRead(PS_basic_normal, PS, xcdr_v2, false);
+  VerifyRead(PS_basic_normal, PS, basic_cdr_stream(endianness::big_endian), false);
+  VerifyRead(PS_basic_normal, PS, xcdr_v1_stream(endianness::big_endian), false);
+  VerifyRead(PS_basic_normal, PS, xcdr_v2_stream(endianness::big_endian), false);
 
-  VerifyRead(PS_basic_key, PS_key_test, basic, true);
-  VerifyRead(PS_basic_key, PS_key_test, xcdr_v1, true);
-  VerifyRead(PS_basic_key, PS_key_test, xcdr_v2, true);
+  VerifyRead(PS_basic_key, PS_key_test, basic_cdr_stream(endianness::big_endian), true);
+  VerifyRead(PS_basic_key, PS_key_test, xcdr_v1_stream(endianness::big_endian), true);
+  VerifyRead(PS_basic_key, PS_key_test, xcdr_v2_stream(endianness::big_endian), true);
 
-  write_test(PS, PS_basic_normal, PS_basic_key, basic)
-  write_test(PS, PS_basic_normal, PS_basic_key, xcdr_v1)
-  write_test(PS, PS_basic_normal, PS_basic_key, xcdr_v2)
+  write_test(PS, PS_basic_normal, PS_basic_key, basic_cdr_stream(endianness::big_endian))
+  write_test(PS, PS_basic_normal, PS_basic_key, xcdr_v1_stream(endianness::big_endian))
+  write_test(PS, PS_basic_normal, PS_basic_key, xcdr_v2_stream(endianness::big_endian))
 }
 
 /*verifying reads/writes of a struct containing enums*/
@@ -850,11 +784,11 @@ TEST_F(CDRStreamer, cdr_optional)
 
   ASSERT_EQ(b.status(), uint64_t(serialization_status::unsupported_property));
 
-  readwrite_test(OFS, OFS_xcdr_v1_normal, OFS_key, xcdr_v1)
-  readwrite_test(OAS, OFS_xcdr_v1_normal, OFS_key, xcdr_v1)
-  readwrite_test(OMS, OMS_xcdr_v1_normal, OFS_key, xcdr_v1)
+  readwrite_test(OFS, OFS_xcdr_v1_normal, OFS_key, xcdr_v1_stream(endianness::big_endian))
+  readwrite_test(OAS, OFS_xcdr_v1_normal, OFS_key, xcdr_v1_stream(endianness::big_endian))
+  readwrite_test(OMS, OMS_xcdr_v1_normal, OFS_key, xcdr_v1_stream(endianness::big_endian))
 
-  readwrite_test(OFS, OFS_xcdr_v2_normal, OFS_key, xcdr_v2)
-  readwrite_test(OAS, OAS_xcdr_v2_normal, OFS_key, xcdr_v2)
-  readwrite_test(OMS, OMS_xcdr_v2_normal, OFS_key, xcdr_v2)
+  readwrite_test(OFS, OFS_xcdr_v2_normal, OFS_key, xcdr_v2_stream(endianness::big_endian))
+  readwrite_test(OAS, OAS_xcdr_v2_normal, OFS_key, xcdr_v2_stream(endianness::big_endian))
+  readwrite_test(OMS, OMS_xcdr_v2_normal, OFS_key, xcdr_v2_stream(endianness::big_endian))
 }
