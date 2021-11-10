@@ -215,9 +215,12 @@ public:
 
     /**
      * @brief
-     * Resets the current cursor position and alignment to 0.
+     * Resets the state of the stream as before streaming began.
+     *
+     * Will set the current offset, alignment to 0, clear the stack and fault status.
+     * Will retain the buffer pointer and size.
      */
-    void reset_position() { m_position = 0; m_current_alignment = 0; m_status = 0; }
+    void reset();
 
     /**
      * @brief
@@ -367,7 +370,7 @@ public:
      * @param[in] mode The streaming mode to set for the stream.
      * @param[in] key The key mode to set for the stream.
      */
-    void set_mode(stream_mode mode, bool key) {m_mode = mode; m_key = key; reset_position();}
+    void set_mode(stream_mode mode, bool key) {m_mode = mode; m_key = key; reset();}
 
     /**
      * @brief
@@ -534,18 +537,20 @@ protected:
  * @param[in, out] str The stream which is read from.
  * @param[out] toread The variable to read into.
  * @param[in] N The number of entities to read.
+ *
+ * @return Whether the operation was completed succesfully.
  */
 template<typename S, typename T, std::enable_if_t<std::is_arithmetic<T>::value
                                                && !std::is_enum<T>::value
                                                && std::is_base_of<cdr_stream, S>::value, bool> = true >
-void read(S &str, T& toread, size_t N = 1)
+bool read(S &str, T& toread, size_t N = 1)
 {
-  if (str.abort_status() || str.position() == SIZE_MAX)
-    return;
+  if (str.position() == SIZE_MAX)
+    return false;
 
   if (!str.inside_buffer(sizeof(T)*N) &&
       str.status(serialization_status::buffer_size_exceeded))
-    return;
+    return false;
 
   str.align(sizeof(T), false);
 
@@ -562,6 +567,8 @@ void read(S &str, T& toread, size_t N = 1)
   }
 
   str.incr_position(sizeof(T)*N);
+
+  return true;
 }
 
 /**
@@ -577,18 +584,23 @@ void read(S &str, T& toread, size_t N = 1)
  * @param[in, out] str The stream which is read from.
  * @param[out] toread The variable to read.
  * @param[in] N The number of entities to read.
+ *
+ * @return Whether the operation was completed succesfully.
  */
 template<typename S, typename T, typename I, std::enable_if_t<std::is_integral<I>::value
                                                && std::is_enum<T>::value
                                                && std::is_base_of<cdr_stream, S>::value, bool> = true>
-void read_enum_impl(S& str, T& toread, size_t N) {
+bool read_enum_impl(S& str, T& toread, size_t N)
+{
   T *ptr = &toread;
   I holder = 0;
   for (size_t i = 0; i < N; i++, ptr++)
   {
-    read(str, holder);
+    if (!read(str, holder))
+      return false;
     *ptr = enum_conversion<T>(holder);
   }
+  return true;
 }
 
 /**
@@ -604,18 +616,20 @@ void read_enum_impl(S& str, T& toread, size_t N) {
  * @param[in, out] str The stream which is written to.
  * @param[in] towrite The variable to write.
  * @param[in] N The number of entities to write.
+ *
+ * @return Whether the operation was completed succesfully.
  */
 template<typename S, typename T, std::enable_if_t<std::is_arithmetic<T>::value
                                                && !std::is_enum<T>::value
                                                && std::is_base_of<cdr_stream, S>::value, bool> = true >
-void write(S& str, const T& towrite, size_t N = 1)
+bool write(S& str, const T& towrite, size_t N = 1)
 {
-  if (str.abort_status() || str.position() == SIZE_MAX)
-    return;
+  if (str.position() == SIZE_MAX)
+    return false;
 
   if (!str.inside_buffer(sizeof(T)*N) &&
       str.status(serialization_status::buffer_size_exceeded))
-    return;
+    return false;
 
   str.align(sizeof(T), true);
 
@@ -632,6 +646,8 @@ void write(S& str, const T& towrite, size_t N = 1)
   }
 
   str.incr_position(sizeof(T)*N);
+
+  return true;
 }
 
 /**
@@ -648,18 +664,24 @@ void write(S& str, const T& towrite, size_t N = 1)
  * @param[in, out] str The stream which is written to.
  * @param[in] towrite The variable to write.
  * @param[in] N The number of entities to write.
+ *
+ * @return Whether the operation was completed succesfully.
  */
 template<typename S, typename T, typename I, std::enable_if_t<std::is_integral<I>::value
                                                && std::is_enum<T>::value
                                                && std::is_base_of<cdr_stream, S>::value, bool> = true>
-void write_enum_impl(S& str, const T& towrite, size_t N) {
+bool write_enum_impl(S& str, const T& towrite, size_t N)
+{
   const T *ptr = &towrite;
   if (sizeof(T) == sizeof(I)) {
-      write(str, *reinterpret_cast<const I*>(ptr), N);
+      if (!write(str, *reinterpret_cast<const I*>(ptr), N))
+        return false;
   } else {
     for (size_t i = 0; i < N; i++, ptr++)
-      write(str, *reinterpret_cast<const I*>(ptr));
+      if (!write(str, *reinterpret_cast<const I*>(ptr)))
+        return false;
   }
+  return true;
 }
 
 /**
@@ -673,18 +695,22 @@ void write_enum_impl(S& str, const T& towrite, size_t N) {
  *
  * @param[in, out] str The stream whose cursor is moved.
  * @param[in] N The number of entities to move.
+ *
+ * @return Whether the operation was completed succesfully.
  */
 template<typename S, typename T, std::enable_if_t<std::is_arithmetic<T>::value
                                                && !std::is_enum<T>::value
                                                && std::is_base_of<cdr_stream, S>::value, bool> = true >
-void move(S& str, const T&, size_t N = 1)
+bool move(S& str, const T&, size_t N = 1)
 {
-  if (str.abort_status() || str.position() == SIZE_MAX)
-    return;
+  if (str.position() == SIZE_MAX)
+    return true;
 
   str.align(sizeof(T), false);
 
   str.incr_position(sizeof(T)*N);
+
+  return true;
 }
 
 /**
@@ -703,13 +729,15 @@ void move(S& str, const T&, size_t N = 1)
  * @param[in, out] str The stream whose cursor is moved.
  * @param[in] max_sz The variable to move the cursor by, no contents of this variable are used, it is just used to determine the template.
  * @param[in] N The number of entities at most to move.
+ *
+ * @return Whether the operation was completed succesfully.
  */
 template<typename S, typename T, std::enable_if_t<std::is_arithmetic<T>::value
                                                && !std::is_enum<T>::value
                                                && std::is_base_of<cdr_stream, S>::value, bool> = true >
-void max(S& str, const T& max_sz, size_t N = 1)
+bool max(S& str, const T& max_sz, size_t N = 1)
 {
-  move(str, max_sz, N);
+  return move(str, max_sz, N);
 }
 
  /**
@@ -732,29 +760,32 @@ void max(S& str, const T& max_sz, size_t N = 1)
  * @param[in, out] str The stream to read from.
  * @param[out] toread The string to read to.
  * @param[in] N The maximum number of characters to read from the stream.
+ *
+ * @return Whether the operation was completed succesfully.
  */
 template<typename S, typename T, std::enable_if_t<std::is_base_of<cdr_stream, S>::value, bool> = true >
-void read_string(S& str, T& toread, size_t N)
+bool read_string(S& str, T& toread, size_t N)
 {
-  if (str.abort_status() || str.position() == SIZE_MAX)
-    return;
+  if (str.position() == SIZE_MAX)
+    return false;
 
   uint32_t string_length = 0;
 
-  read(str, string_length);
+  if (!read(str, string_length))
+    return false;
 
   if (!str.inside_buffer(string_length) &&
       str.status(serialization_status::buffer_size_exceeded))
-    return;
+    return false;
 
   if (string_length == 0
    && str.status(serialization_status::illegal_field_value))
-    return;
+    return false;
 
   if (N
    && string_length > N + 1
    && str.status(serialization_status::read_bound_exceeded))
-      return;
+      return false;
 
   auto cursor = str.get_cursor();
   toread.assign(cursor, cursor + std::min<size_t>(string_length - 1, N ? N : SIZE_MAX));  //remove 1 for terminating NULL
@@ -763,6 +794,8 @@ void read_string(S& str, T& toread, size_t N)
 
   //aligned to chars
   str.alignment(1);
+
+  return true;
 }
 
 /**
@@ -776,25 +809,27 @@ void read_string(S& str, T& toread, size_t N)
  * @param[in, out] str The stream to write to.
  * @param[in] towrite The string to write.
  * @param[in] N The maximum number of characters to write to the stream.
+ *
+ * @return Whether the operation was completed succesfully.
  */
 template<typename S, typename T, std::enable_if_t<std::is_base_of<cdr_stream, S>::value, bool> = true >
-void write_string(S& str, const T& towrite, size_t N)
+bool write_string(S& str, const T& towrite, size_t N)
 {
-  if (str.abort_status() || str.position() == SIZE_MAX)
-    return;
+  if (str.position() == SIZE_MAX)
+    return false;
 
   size_t string_length = towrite.length() + 1;  //add 1 extra for terminating NULL
 
   if (N
    && string_length > N + 1
    && str.status(serialization_status::write_bound_exceeded))
-      return;
+      return false;
 
   write(str, uint32_t(string_length));
 
   if (!str.inside_buffer(string_length)
    && str.status(serialization_status::buffer_size_exceeded))
-    return;
+    return false;
 
   memcpy(str.get_cursor(), towrite.c_str(), string_length);
 
@@ -803,6 +838,7 @@ void write_string(S& str, const T& towrite, size_t N)
   //aligned to chars
   str.alignment(1);
 
+  return true;
 }
 
 /**
@@ -816,19 +852,21 @@ void write_string(S& str, const T& towrite, size_t N)
  * @param[in, out] str The stream whose cursor is moved.
  * @param[in] toincr The string used to move the cursor.
  * @param[in] N The maximum number of characters in the string which the stream is moved by.
+ *
+ * @return Whether the operation was completed succesfully.
  */
 template<typename S, typename T, std::enable_if_t<std::is_base_of<cdr_stream, S>::value, bool> = true >
-void move_string(S& str, const T& toincr, size_t N)
+bool move_string(S& str, const T& toincr, size_t N)
 {
-  if (str.abort_status() || str.position() == SIZE_MAX)
-    return;
+  if (str.position() == SIZE_MAX)
+    return true;
 
   size_t string_length = toincr.length() + 1;  //add 1 extra for terminating NULL
 
   if (N
    && string_length > N + 1
    && str.status(serialization_status::move_bound_exceeded))
-      return;
+      return false;
 
   move(str, uint32_t());
 
@@ -836,6 +874,8 @@ void move_string(S& str, const T& toincr, size_t N)
 
   //aligned to chars
   str.alignment(1);
+
+  return true;
 }
 
 /**
@@ -849,14 +889,18 @@ void move_string(S& str, const T& toincr, size_t N)
  * @param[in, out] str The stream whose cursor is moved.
  * @param[in] max_sz The string used to move the cursor.
  * @param[in] N The maximum number of characters in the string which the stream is at most moved by.
+ *
+ * @return Whether the operation was completed succesfully.
  */
 template<typename S, typename T, std::enable_if_t<std::is_base_of<cdr_stream, S>::value, bool> = true >
-void max_string(S& str, const T& max_sz, size_t N)
+bool max_string(S& str, const T& max_sz, size_t N)
 {
   if (N == 0)
     str.position(SIZE_MAX); //unbounded string, theoretical length unlimited
   else
-    move_string(str, max_sz, N);
+    return move_string(str, max_sz, N);
+
+  return true;
 }
 
 }

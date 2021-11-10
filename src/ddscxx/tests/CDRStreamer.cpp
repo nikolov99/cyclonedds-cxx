@@ -66,12 +66,10 @@ template<typename T, typename S>
 void VerifyWrite(const T& in, const bytes &out, S stream, bool as_key)
 {
   bytes buffer;
-  move(stream, in, as_key);
-  ASSERT_EQ(stream.status(),0);
+  ASSERT_TRUE(move(stream, in, as_key));
   buffer.resize(stream.position());
   stream.set_buffer(buffer.data(), buffer.size());
-  write(stream, in, as_key);
-  ASSERT_EQ(stream.status(),0);
+  ASSERT_TRUE(write(stream, in, as_key));
   ASSERT_EQ(buffer, out);
 }
 
@@ -81,8 +79,7 @@ void VerifyRead(const bytes &in, const T& out, S stream, bool as_key)
   bytes incopy(in);
   T buffer;
   stream.set_buffer(incopy.data(), incopy.size());
-  read(stream, buffer, as_key);
-  ASSERT_EQ(stream.status(),0);
+  ASSERT_TRUE(read(stream, buffer, as_key));
 
   if (as_key)
     ASSERT_EQ(buffer.c(), out.c());
@@ -97,8 +94,7 @@ void VerifyReadOneDeeper(const bytes &in, const T& out, S stream, bool as_key)
   T buffer;
 
   stream.set_buffer(incopy.data(), incopy.size());
-  read(stream, buffer, as_key);
-  ASSERT_EQ(stream.status(),0);
+  ASSERT_TRUE(read(stream, buffer, as_key));
 
   if (as_key) {
     ASSERT_EQ(buffer.c().size(), out.c().size());
@@ -151,28 +147,22 @@ TEST_F(CDRStreamer, cdr_boundary)
 
   basic_cdr_stream str;
   str.set_buffer(buffer.data(), 12);
-  write(str, BS, false); /*this write should fail, as the buffer limit is too small*/
 
+  ASSERT_FALSE(write(str, BS, false)); /*this write should fail, as the buffer limit is too small*/
   ASSERT_EQ(str.status(), serialization_status::buffer_size_exceeded);
-  ASSERT_TRUE(str.abort_status());
 
-  str.reset_position();
-  read(str, BS2, false); /*this read should fail too, as the buffer limit is too small*/
+  str.reset();
 
+  ASSERT_FALSE(read(str, BS2, false)); /*this read should fail too, as the buffer limit is too small*/
   ASSERT_EQ(str.status(), serialization_status::buffer_size_exceeded);
-  ASSERT_TRUE(str.abort_status());
 
   str.set_buffer(buffer.data(), 32);
-  write(str, BS, false); /*this write should finish, as the buffer limit is set as "unlimited"*/
 
-  ASSERT_EQ(str.status(), 0x0);
-  ASSERT_FALSE(str.abort_status());
+  ASSERT_TRUE(write(str, BS, false)); /*this write should finish, as the buffer limit is set as "unlimited"*/
 
-  str.reset_position();
-  read(str, BS2, false); /*this write should finish, as the buffer limit is set as "unlimited"*/
+  str.reset();
 
-  ASSERT_EQ(str.status(), 0x0);
-  ASSERT_FALSE(str.abort_status());
+  ASSERT_TRUE(read(str, BS2, false)); /*this write should finish, as the buffer limit is set as "unlimited"*/
   ASSERT_EQ(BS, BS2);
 }
 

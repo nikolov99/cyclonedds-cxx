@@ -22,10 +22,11 @@ namespace cdr {
 
 entity_properties_t cdr_stream::m_final = final_entry();
 
-void cdr_stream::set_buffer(void* toset, size_t buffer_size) {
+void cdr_stream::set_buffer(void* toset, size_t buffer_size)
+{
   m_buffer = static_cast<char*>(toset);
   m_buffer_size = buffer_size;
-  reset_position();
+  reset();
 }
 
 size_t cdr_stream::align(size_t newalignment, bool add_zeroes)
@@ -79,6 +80,14 @@ entity_properties_t& cdr_stream::next_prop(entity_properties_t &props, member_li
     m_stack.pop();
 
   return entity;
+}
+
+void cdr_stream::reset()
+{
+  m_position = 0;
+  m_current_alignment = 0;
+  m_status = 0;
+  m_stack = std::stack<proplist::iterator>();
 }
 
 entity_properties_t& cdr_stream::top_of_stack()
