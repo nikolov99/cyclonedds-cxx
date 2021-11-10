@@ -92,7 +92,7 @@ void CDRStreamer::VerifyWrite(const T& in, const bytes &out, stream_type stream,
       move(b, in, as_key);
       ASSERT_EQ(b.status(),0);
       buffer.resize(b.position());
-      b.set_buffer(buffer.data());
+      b.set_buffer(buffer.data(), buffer.size());
       write(b, in, as_key);
       ASSERT_EQ(b.status(),0);
       break;
@@ -100,7 +100,7 @@ void CDRStreamer::VerifyWrite(const T& in, const bytes &out, stream_type stream,
       move(x_1, in, as_key);
       ASSERT_EQ(x_1.status(),0);
       buffer.resize(x_1.position());
-      x_1.set_buffer(buffer.data());
+      x_1.set_buffer(buffer.data(), buffer.size());
       write(x_1, in, as_key);
       ASSERT_EQ(x_1.status(),0);
       break;
@@ -108,7 +108,7 @@ void CDRStreamer::VerifyWrite(const T& in, const bytes &out, stream_type stream,
       move(x_2, in, as_key);
       ASSERT_EQ(x_2.status(),0);
       buffer.resize(x_2.position());
-      x_2.set_buffer(buffer.data());
+      x_2.set_buffer(buffer.data(), buffer.size());
       write(x_2, in, as_key);
       ASSERT_EQ(x_2.status(),0);
       break;
@@ -124,17 +124,17 @@ void CDRStreamer::VerifyRead(const bytes &in, const T& out, stream_type stream, 
   T buffer;
   switch (stream) {
     case basic:
-      b.set_buffer(incopy.data());
+      b.set_buffer(incopy.data(), incopy.size());
       read(b, buffer, as_key);
       ASSERT_EQ(b.status(),0);
       break;
     case xcdr_v1:
-      x_1.set_buffer(incopy.data());
+      x_1.set_buffer(incopy.data(), incopy.size());
       read(x_1, buffer, as_key);
       ASSERT_EQ(x_1.status(),0);
       break;
     case xcdr_v2:
-      x_2.set_buffer(incopy.data());
+      x_2.set_buffer(incopy.data(), incopy.size());
       read(x_2, buffer, as_key);
       ASSERT_EQ(x_2.status(),0);
       break;
@@ -153,15 +153,15 @@ void CDRStreamer::VerifyReadOneDeeper(const bytes &in, const T& out, stream_type
   T buffer;
   switch (stream) {
     case basic:
-      b.set_buffer(incopy.data());
+      b.set_buffer(incopy.data(), incopy.size());
       read(b, buffer, as_key);
       break;
     case xcdr_v1:
-      x_1.set_buffer(incopy.data());
+      x_1.set_buffer(incopy.data(), incopy.size());
       read(x_1, buffer, as_key);
       break;
     case xcdr_v2:
-      x_2.set_buffer(incopy.data());
+      x_2.set_buffer(incopy.data(), incopy.size());
       read(x_2, buffer, as_key);
       break;
   }
@@ -204,6 +204,43 @@ readwrite_test(test_struct, xcdr_v2_normal_bytes, key_bytes, xcdr_v2)
 readwrite_deeper_test(test_struct, cdr_normal_bytes, key_bytes, basic)\
 readwrite_deeper_test(test_struct, xcdr_v1_normal_bytes, key_bytes, xcdr_v1)\
 readwrite_deeper_test(test_struct, xcdr_v2_normal_bytes, key_bytes, xcdr_v2)
+
+/*verifying streamer will not read/write beyond the end of the indicated buffer*/
+
+TEST_F(CDRStreamer, cdr_boundary)
+{
+  basicstruct BS(123456, 'g', "abcdef", 654.321);
+  /*this struct should be 4 + 1 + 3 + 4 + 7 + 5 + 8 = 32 bytes long, in basic cdr serialization*/
+  basicstruct BS2;
+
+  std::vector<char> buffer(32,0x0);
+
+  basic_cdr_stream str;
+  str.set_buffer(buffer.data(), 12);
+  write(str, BS, false); /*this write should fail, as the buffer limit is too small*/
+
+  ASSERT_EQ(str.status(), serialization_status::buffer_size_exceeded);
+  ASSERT_TRUE(str.abort_status());
+
+  str.reset_position();
+  read(str, BS2, false); /*this read should fail too, as the buffer limit is too small*/
+
+  ASSERT_EQ(str.status(), serialization_status::buffer_size_exceeded);
+  ASSERT_TRUE(str.abort_status());
+
+  str.set_buffer(buffer.data(), 32);
+  write(str, BS, false); /*this write should finish, as the buffer limit is set as "unlimited"*/
+
+  ASSERT_EQ(str.status(), 0x0);
+  ASSERT_FALSE(str.abort_status());
+
+  str.reset_position();
+  read(str, BS2, false); /*this write should finish, as the buffer limit is set as "unlimited"*/
+
+  ASSERT_EQ(str.status(), 0x0);
+  ASSERT_FALSE(str.abort_status());
+  ASSERT_EQ(BS, BS2);
+}
 
 /*verifying reads/writes of a basic struct*/
 
@@ -802,13 +839,13 @@ TEST_F(CDRStreamer, cdr_optional)
   bytes in_bytes {'a', 'b', 'c'};
   optional_final_struct out_struct;
   basic_cdr_stream b(endianness::big_endian);
-  b.set_buffer(in_bytes.data());
+  b.set_buffer(in_bytes.data(), in_bytes.size());
   read(b, out_struct, false);
 
   ASSERT_EQ(b.status(), uint64_t(serialization_status::unsupported_property));
 
   bytes out_bytes(3, 0);
-  b.set_buffer(out_bytes.data());
+  b.set_buffer(out_bytes.data(), out_bytes.size());
   write(b, OFS, false);
 
   ASSERT_EQ(b.status(), uint64_t(serialization_status::unsupported_property));

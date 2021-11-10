@@ -50,7 +50,7 @@ bool to_key(streamer& str, const T& tokey, ddsi_keyhash_t& hash)
   if (sz != 0 && padding == 16) padding = 0;
   std::vector<unsigned char> buffer(sz + padding);
   memset(buffer.data() + sz, 0x0, padding);
-  str.set_buffer(buffer.data());
+  str.set_buffer(buffer.data(), buffer.size());
   /* TODO: what is key endianness to be used here?
    * since, this may be different between nodes, and if this value is used
    * for global lookups or the like, this
@@ -59,7 +59,6 @@ bool to_key(streamer& str, const T& tokey, ddsi_keyhash_t& hash)
   static bool (*fptr)(const std::vector<unsigned char>&, ddsi_keyhash_t&) = NULL;
   if (fptr == NULL)
   {
-    str.set_buffer(nullptr);
     max(str, tokey, true);
     if (str.position() <= 16)
     {
@@ -277,7 +276,7 @@ ddsi_serdata *serdata_from_ser(
   if (d->getT())
   {
     org::eclipse::cyclonedds::core::cdr::basic_cdr_stream str;
-    str.set_buffer(calc_offset(d->data(), 4));
+    str.set_buffer(calc_offset(d->data(), 4), size-4);
     d->key_md5_hashed() = to_key(str, *d->getT(), d->key());
     d->populate_hash();
   }
@@ -315,7 +314,7 @@ ddsi_serdata *serdata_from_ser_iov(
   T* ptr = d->getT();
   if (ptr) {
     org::eclipse::cyclonedds::core::cdr::basic_cdr_stream str;
-    str.set_buffer(calc_offset(d->data(), 4));
+    str.set_buffer(calc_offset(d->data(), 4), size-4);
     d->key_md5_hashed() = to_key(str, *ptr, d->key());
     d->populate_hash();
   } else {
@@ -382,7 +381,7 @@ ddsi_serdata *serdata_from_sample(
   if (native_endianness() == endianness::little_endian)
     *(ptr + 1) = 0x1;
 
-  str.set_buffer(calc_offset(d->data(), 4));
+  str.set_buffer(calc_offset(d->data(), 4), sz-4);
 
   write(str, msg, kind == SDK_KEY);
 
@@ -465,7 +464,7 @@ ddsi_serdata *serdata_to_untyped(const ddsi_serdata* dcmn)
   if (native_endianness() == endianness::little_endian)
     *(ptr + 1) = 0x1;
 
-  str.set_buffer(calc_offset(d1->data(), 4));  //4 offset due to header field
+  str.set_buffer(calc_offset(d1->data(), 4), d1->size()-4);  //4 offset due to header field
   write(str, *t, true);
   if (str.abort_status())
     goto failure;

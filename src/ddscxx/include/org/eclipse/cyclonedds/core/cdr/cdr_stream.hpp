@@ -121,7 +121,11 @@ constexpr endianness native_endianness() { return endianness(DDSRT_ENDIAN); }
  * @var serialization_status::write_bound_exceeded The serialization has encountered a field which has exceeded the bounds set for it.
  * @var serialization_status::read_bound_exceeded The serialization has encountered a field which has exceeded the bounds set for it.
  * @var serialization_status::illegal_field_value The serialization has encountered a field with a value which should never occur in a valid CDR stream.
- * @var serialization_status::invalid_pl_entry The serialization has encountered a field which it cannot parse.
+ * @var serialization_status::invalid_pl_entry The serialization has encountered a parameter list id which is illegal (not extended id in reserved for OMG space).
+ * @var serialization_status::invalid_dl_entry The serialization has attempted to read outside bounds set by the entity delimiter.
+ * @var serialization_status::unsupported_property A streamer has attempted to stream a field having a property which is not supported by the streaming method.
+ * @var serialization_status::must_understand_fail A struct being read contains a field that it must understand but does not recognize.
+ * @var serialization_status::buffer_size_exceeded The streamer has attempted to access outside its buffer's bounds.
  */
 enum serialization_status {
   move_bound_exceeded   = 0x1 << 0,
@@ -131,7 +135,8 @@ enum serialization_status {
   invalid_dl_entry      = 0x1 << 4,
   illegal_field_value   = 0x1 << 5,
   unsupported_property  = 0x1 << 6,
-  must_understand_fail  = 0x1 << 7
+  must_understand_fail  = 0x1 << 7,
+  buffer_size_exceeded  = 0x1 << 8
 };
 
 /**
@@ -212,7 +217,7 @@ public:
      * @brief
      * Resets the current cursor position and alignment to 0.
      */
-    void reset_position() { m_position = 0; m_current_alignment = 0; }
+    void reset_position() { m_position = 0; m_current_alignment = 0; m_status = 0; }
 
     /**
      * @brief
@@ -222,8 +227,9 @@ public:
      * As a side effect, the current position and alignment are reset, since these are not associated with the new buffer.
      *
      * @param[in] toset The new pointer of the buffer to set.
+     * @param[in] buffer_size The size of the buffer being set.
      */
-    void set_buffer(void* toset);
+    void set_buffer(void* toset, size_t buffer_size = SIZE_MAX);
 
     /**
      * @brief
@@ -438,11 +444,22 @@ public:
      */
     virtual void finish_struct(entity_properties_t &props) = 0;
 
+    /**
+     * @brief
+     * Function for checking whether we are not yet about to reach the end of the buffer.
+     *
+     * @param[in] n_bytes The number of bytes we want in the buffer.
+     *
+     * @retval true The buffer has at least n_bytes to its end.
+     * @retval false The buffer does not have at least n_bytes to its end.
+     */
+    bool inside_buffer(size_t n_bytes) {return m_position + n_bytes <= m_buffer_size;}
+
 protected:
 
     /**
      * @brief
-     * Member list types/
+     * Member list types
      *
      * @enum member_list_type Which type of list of entries is to be iterated over,
      * used in calls to cdr_stream::next_prop.
@@ -476,6 +493,7 @@ protected:
     endianness m_stream_endianness,               /**< the endianness of the stream*/
         m_local_endianness = native_endianness(); /**< the local endianness*/
     size_t m_position = 0,                        /**< the current offset position in the stream*/
+        m_buffer_size = 0,                        /**< the size of the current buffer*/
         m_max_alignment,                          /**< the maximum bytes that can be aligned to*/
         m_current_alignment = 1;                  /**< the current alignment*/
     char* m_buffer = nullptr;                     /**< the current buffer in use*/
@@ -523,6 +541,10 @@ template<typename S, typename T, std::enable_if_t<std::is_arithmetic<T>::value
 void read(S &str, T& toread, size_t N = 1)
 {
   if (str.abort_status() || str.position() == SIZE_MAX)
+    return;
+
+  if (!str.inside_buffer(sizeof(T)*N) &&
+      str.status(serialization_status::buffer_size_exceeded))
     return;
 
   str.align(sizeof(T), false);
@@ -589,6 +611,10 @@ template<typename S, typename T, std::enable_if_t<std::is_arithmetic<T>::value
 void write(S& str, const T& towrite, size_t N = 1)
 {
   if (str.abort_status() || str.position() == SIZE_MAX)
+    return;
+
+  if (!str.inside_buffer(sizeof(T)*N) &&
+      str.status(serialization_status::buffer_size_exceeded))
     return;
 
   str.align(sizeof(T), true);
@@ -717,6 +743,10 @@ void read_string(S& str, T& toread, size_t N)
 
   read(str, string_length);
 
+  if (!str.inside_buffer(string_length) &&
+      str.status(serialization_status::buffer_size_exceeded))
+    return;
+
   if (string_length == 0
    && str.status(serialization_status::illegal_field_value))
     return;
@@ -761,6 +791,10 @@ void write_string(S& str, const T& towrite, size_t N)
       return;
 
   write(str, uint32_t(string_length));
+
+  if (!str.inside_buffer(string_length)
+   && str.status(serialization_status::buffer_size_exceeded))
+    return;
 
   memcpy(str.get_cursor(), towrite.c_str(), string_length);
 
