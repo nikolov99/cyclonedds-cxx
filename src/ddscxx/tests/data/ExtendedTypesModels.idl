@@ -1,0 +1,27 @@
+
+module ExtendedTypes_testing {
+
+  @appendable struct appendablestruct_smaller {
+    @id(2) char c;
+    @id(4) char d;
+  };
+
+  @appendable struct appendablestruct_larger {
+    @id(2) char c;
+    @id(4) char d;
+    @id(6) char e;
+  };
+
+  @mutable struct mutablestruct_a {
+    @id(0) char b;
+    @id(2) char c;
+    @id(4) char d;
+  };
+
+  @mutable struct mutablestruct_b {
+    @id(2) char c;
+    @id(4) char d;
+    @id(6) char e;
+  };
+
+};
