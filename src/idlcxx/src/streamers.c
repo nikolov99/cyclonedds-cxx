@@ -1065,7 +1065,8 @@ print_constructed_type_open(struct streams *streams, const idl_node_t *node)
 
   static const char *fmt =
     "template<typename T, std::enable_if_t<std::is_base_of<cdr_stream, T>::value, bool> = true >\n"
-    "bool {T}(T& streamer, {C}%1$s& instance, entity_properties_t &props) {\n";
+    "bool {T}(T& streamer, {C}%1$s& instance, entity_properties_t &props) {\n"
+    "  (void)instance;\n";
   static const char *pfmt1 =
     "template<>\n"
     "entity_properties_t& get_type_props<%s>()%s";
@@ -1131,7 +1132,6 @@ print_constructed_type_close(
 {
   static const char *fmt =
     "  streamer.finish_struct(props);\n"
-    "  (void)instance;\n"
     "  return true;\n"
     "}\n\n";
   static const char *pfmt =
@@ -1389,7 +1389,8 @@ process_typedef_decl(
   static const char* fmt =
     "template<typename T, std::enable_if_t<std::is_base_of<cdr_stream, T>::value, bool> = true >\n"
     "bool {T}_%1$s(T& streamer, {C}%2$s& instance) {\n"
-    "   auto &prop = get_type_props<%3$s>();\n";
+    "  (void)instance;\n"
+    "  auto &prop = get_type_props<%3$s>();\n";
   char* name = NULL;
   if (IDL_PRINTA(&name, get_cpp11_name_typedef, declarator, streams->generator) < 0)
     return IDL_RETCODE_NO_MEMORY;
@@ -1412,7 +1413,7 @@ process_typedef_decl(
   if (process_entity(pstate, streams, declarator, type_spec, loc))
     return IDL_RETCODE_NO_MEMORY;
 
-  if (multi_putf(streams, ALL, "  (void)instance;\n  return true;\n}\n\n"))
+  if (multi_putf(streams, ALL, "  return true;\n}\n\n"))
     return IDL_RETCODE_NO_MEMORY;
 
   return flush(streams->generator, streams);
