@@ -68,6 +68,7 @@ void xcdr_v1_stream::finish_member(entity_properties_t &prop, bool present)
 void xcdr_v1_stream::skip_entity(const entity_properties_t &props)
 {
   incr_position(props.e_sz);
+  alignment(0);
 }
 
 entity_properties_t& xcdr_v1_stream::next_entity(entity_properties_t &props, bool &firstcall)

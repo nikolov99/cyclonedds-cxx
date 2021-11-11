@@ -81,6 +81,7 @@ void xcdr_v2_stream::move_optional_tag()
 void xcdr_v2_stream::skip_entity(const entity_properties_t &props)
 {
   incr_position(props.e_sz);
+  alignment(0);
 }
 
 bool xcdr_v2_stream::bytes_available(const entity_properties_t &props)
