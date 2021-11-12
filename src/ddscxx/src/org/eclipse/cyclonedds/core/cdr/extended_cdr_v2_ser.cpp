@@ -33,6 +33,8 @@ const uint32_t xcdr_v2_stream::must_understand = uint32_t(0x80000000);
 
 void xcdr_v2_stream::start_member(entity_properties_t &prop, bool present)
 {
+  start_member_impl(prop);
+
   switch (m_mode) {
     case stream_mode::write:
       if (em_header_necessary(prop)) {
@@ -58,6 +60,8 @@ void xcdr_v2_stream::start_member(entity_properties_t &prop, bool present)
 
 void xcdr_v2_stream::finish_member(entity_properties_t &prop, bool present)
 {
+  finish_member_impl(prop);
+
   if (m_mode == stream_mode::write) {
     prop.e_sz = static_cast<uint32_t>(position()-prop.e_off);
     if (em_header_necessary(prop)) {
@@ -67,10 +71,10 @@ void xcdr_v2_stream::finish_member(entity_properties_t &prop, bool present)
   }
 }
 
-void xcdr_v2_stream::write_optional_tag(entity_properties_t &props, bool present)
+void xcdr_v2_stream::write_optional_tag(entity_properties_t &prop, bool present)
 {
   write(*this, present ? uint8_t(1) : uint8_t(0));
-  props.e_off = position();
+  prop.e_off = position();
 }
 
 void xcdr_v2_stream::move_optional_tag()
@@ -137,10 +141,12 @@ entity_properties_t& xcdr_v2_stream::next_entity(entity_properties_t &props, boo
         continue;
 
       auto p = std::equal_range(ptr->begin(), ptr->end(), m_current_header, entity_properties_t::member_id_comp);
-      if (p.first != ptr->end() && (p.first->m_id == m_current_header.m_id || (!(*p.first) && !m_current_header)))
+      if (p.first != ptr->end() && (p.first->m_id == m_current_header.m_id || (!(*p.first) && !m_current_header))) {
+        //copy flags
         return *(p.first);
-      else
+      } else {
         return m_current_header;
+      }
     }
   }
 
@@ -155,7 +161,7 @@ void xcdr_v2_stream::read_em_header(entity_properties_t &props)
   read(*this,emheader);
 
   uint32_t factor = 0;
-  props.must_understand = emheader & must_understand;
+  props.must_understand_remote = emheader & must_understand;
   props.m_id = emheader & id_mask;
   switch (emheader & lc_mask) {
     case bytes_1:
@@ -210,6 +216,8 @@ bool xcdr_v2_stream::list_necessary(const entity_properties_t &props)
 
 void xcdr_v2_stream::start_struct(entity_properties_t &props)
 {
+  start_struct_impl(props);
+
   if (!d_header_necessary(props))
     return;
 
@@ -231,6 +239,8 @@ void xcdr_v2_stream::start_struct(entity_properties_t &props)
 
 void xcdr_v2_stream::finish_struct(entity_properties_t &props)
 {
+  finish_struct_impl(props, m_key ? member_list_type::key : (list_necessary(props) ? member_list_type::member_by_id : member_list_type::member_by_seq));
+
   if (d_header_necessary(props) && m_mode == stream_mode::write)
     finish_d_header(props);
 }
@@ -244,7 +254,7 @@ void xcdr_v2_stream::write_d_header(entity_properties_t &props)
 
 void xcdr_v2_stream::write_em_header(entity_properties_t &props)
 {
-  uint32_t mheader = (props.must_understand ? must_understand : 0)
+  uint32_t mheader = (props.must_understand_local ? must_understand : 0)
                      + (id_mask & props.m_id);
 
   switch (props.e_bb) {

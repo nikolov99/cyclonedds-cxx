@@ -477,6 +477,11 @@ protected:
       key
     };
 
+    void start_member_impl(entity_properties_t &prop);
+    void finish_member_impl(entity_properties_t &prop);
+    void start_struct_impl(entity_properties_t &props);
+    void finish_struct_impl(entity_properties_t &props, member_list_type list_type);
+
     /**
      * @brief
      * Function for retrieving the next entity to be operated on by the streamer.
@@ -782,10 +787,8 @@ bool read_string(S& str, T& toread, size_t N)
    && str.status(serialization_status::illegal_field_value))
     return false;
 
-  if (N
-   && string_length > N + 1
-   && str.status(serialization_status::read_bound_exceeded))
-      return false;
+  if (N && string_length > N + 1)
+    return false;
 
   auto cursor = str.get_cursor();
   toread.assign(cursor, cursor + std::min<size_t>(string_length - 1, N ? N : SIZE_MAX));  //remove 1 for terminating NULL

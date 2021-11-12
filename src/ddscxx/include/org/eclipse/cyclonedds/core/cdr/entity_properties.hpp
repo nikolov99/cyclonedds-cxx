@@ -103,12 +103,14 @@ struct OMG_DDS_API entity_properties
   uint32_t e_sz = 0; /**< The size of the current entity as member field (only used in reading from streams).*/
   uint32_t d_sz = 0; /**< The size of the current entity as struct (only used in reading from streams).*/
   uint32_t m_id = 0; /**< The member id of the entity, it is the global field by which the entity is identified. */
-  bool must_understand = false; /**< If the reading end cannot parse a field with this header, it must discard the entire object. */
+  bool must_understand_local = false; /**< If the reading end cannot parse a field with this header, it must discard the entire object. */
+  bool must_understand_remote = false; /**< If the reading end cannot parse a field with this header, it must discard the entire object. */
   bool implementation_extension = false;
   bool is_last = false; /**< Indicates terminating entry for reading/writing entities, will cause the current subroutine to end and decrement the stack.*/
   bool ignore = false; /**< Indicates that this field must be ignored.*/
   bool is_optional = false; /**< Indicates that this field can be empty (length 0) for reading/writing purposes.*/
   bool is_key = false; /**< Indicates that this field is a key field.*/
+  bool is_present = false; /**< Indicates that this entity is present in the read stream.*/
   bit_bound e_bb = bb_unset; /**< The minimum number of bytes necessary to represent this entity/bitmask.*/
 
   DDSCXX_WARNING_MSVC_OFF(4251)
@@ -151,6 +153,14 @@ struct OMG_DDS_API entity_properties
    * @return Whether lhs should be sorted before rhs.
    */
   static bool member_id_comp(const entity_properties_t &lhs, const entity_properties_t &rhs);
+
+  /**
+   * @brief
+   * Resets all flags that are set through streaming.
+   *
+   * 
+   */
+  void reset_flags();
 
   /**
    * @brief

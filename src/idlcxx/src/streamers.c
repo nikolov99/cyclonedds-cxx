@@ -312,6 +312,11 @@ write_string_streaming_functions(
   static const char* fmt =
     "      if (!{T}_string(streamer, %1$s, %2$"PRIu32"))\n"
     "        return false;\n";
+  static const char* rfmt =
+    "      if (!{T}_string(streamer, %1$s, %2$"PRIu32")) {\n"
+    "        prop.is_present = false;\n"
+    "        %1$s = %3$s();\n"
+    "      }\n";
   static const char* mfmt =
     "      if (!{T}_string(streamer, %1$s(), %2$"PRIu32"))\n"
     "        return false;\n";
@@ -320,7 +325,7 @@ write_string_streaming_functions(
   if (IDL_PRINTA(&type, get_cpp11_type, type_spec, streams->generator) < 0
    || multi_putf(streams, WRITE | MOVE, fmt, accessor, maximum)
    || multi_putf(streams, MAX, mfmt, type, maximum)
-   || multi_putf(streams, READ, fmt, read_accessor, maximum))
+   || multi_putf(streams, READ, rfmt, read_accessor, maximum, type))
     return IDL_RETCODE_NO_MEMORY;
 
   return IDL_RETCODE_OK;
@@ -336,6 +341,11 @@ write_typedef_streaming_functions(
   static const char* fmt =
     "      if (!{T}_%1$s(streamer, %2$s))\n"
     "        return false;\n";
+  static const char* rfmt =
+    "      if (!{T}_%1$s(streamer, %2$s)) {\n"
+    "        prop.is_present = false;\n"
+    "        %2$s = %3$s();\n"
+    "      }\n";
   static const char* mfmt =
     "      if (!{T}_%1$s(streamer, %2$s()))\n"
     "        return false;\n";
@@ -345,7 +355,7 @@ write_typedef_streaming_functions(
    || IDL_PRINTA(&type, get_cpp11_type, type_spec, streams->generator) < 0
    || multi_putf(streams, WRITE | MOVE, fmt, name, accessor)
    || multi_putf(streams, MAX, mfmt, name, type)
-   || multi_putf(streams, READ, fmt, name, read_accessor))
+   || multi_putf(streams, READ, rfmt, name, read_accessor, type))
     return IDL_RETCODE_NO_MEMORY;
 
   return IDL_RETCODE_OK;
@@ -361,6 +371,11 @@ write_constructed_type_streaming_functions(
   static const char* fmt =
     "      if (!{T}(streamer, %1$s, prop))\n"
     "        return false;\n";
+  static const char* rfmt =
+    "      if (!{T}(streamer, %1$s, prop)) {\n"
+    "        prop.is_present = false;\n"
+    "        %1$s = %2$s();\n"
+    "      }\n";
   static const char* mfmt =
     "      if (!{T}(streamer, %1$s(), prop))\n"
     "        return false;\n";
@@ -369,7 +384,7 @@ write_constructed_type_streaming_functions(
   if (IDL_PRINTA(&type, get_cpp11_type, type_spec, streams->generator) < 0
    || multi_putf(streams, WRITE | MOVE, fmt, accessor)
    || multi_putf(streams, MAX, mfmt, type)
-   || multi_putf(streams, READ, fmt, read_accessor))
+   || multi_putf(streams, READ, rfmt, read_accessor, type))
     return IDL_RETCODE_NO_MEMORY;
 
   return IDL_RETCODE_OK;
@@ -389,7 +404,11 @@ write_base_type_streaming_functions(
   const char* mfmt =
     "      if (!{T}(streamer, %1$s()))\n"
     "        return false;\n";
-  const char* read_fmt = fmt;
+  const char* read_fmt =
+    "      if (!{T}(streamer, %1$s)) {\n"
+    "        prop.is_present = false;\n"
+    "        %1$s = %2$s();\n"
+    "      }\n";
   char *type = NULL;
 
   if (loc.type & SEQUENCE
@@ -397,9 +416,12 @@ write_base_type_streaming_functions(
     read_fmt =
       "      {\n"
       "        bool b(false);\n"
-      "        if (!read(streamer, b))\n"
-      "          return false;\n"
-      "        %1$s = b;\n"
+      "        if (!{T}(streamer, b)) {\n"
+      "          prop.is_present = false;\n"
+      "          %1$s = %2$s();\n"
+      "        } else {\n"
+      "          %1$s = b;\n"
+      "        }\n"
       "      }\n";
 
     fmt =
@@ -413,7 +435,7 @@ write_base_type_streaming_functions(
   if (IDL_PRINTA(&type, get_cpp11_type, type_spec, streams->generator) < 0
    || multi_putf(streams, WRITE | MOVE, fmt, accessor)
    || multi_putf(streams, MAX, mfmt, type)
-   || multi_putf(streams, READ, read_fmt, read_accessor))
+   || multi_putf(streams, READ, read_fmt, read_accessor, type))
     return IDL_RETCODE_NO_MEMORY;
 
   return IDL_RETCODE_OK;
@@ -461,6 +483,8 @@ sequence_writes(const idl_pstate_t* pstate,
     && (idl_mask(type_spec) & IDL_BOOL) != IDL_BOOL) {
     static const char* sfmt = "      if (!{T}(streamer, %1$s[0], se_%2$u))\n"
                               "        return false;\n";
+    static const char* rfmt = "      if (!{T}(streamer, %1$s[0], se_%2$u))\n"
+                              "        prop.is_present = false;\n";
     static const char* mfmt = "      if (!{T}(streamer, %1$s(), se_%2$u))\n"
                               "        return false;\n";
     char* type = NULL;
@@ -468,14 +492,15 @@ sequence_writes(const idl_pstate_t* pstate,
     if (IDL_PRINTA(&type, get_cpp11_type, type_spec, streams->generator) < 0
       || multi_putf(streams, MOVE | MAX, mfmt, type, depth)
       || multi_putf(streams, WRITE, sfmt, accessor, depth)
-      || multi_putf(streams, READ, sfmt, read_accessor, depth))
+      || multi_putf(streams, READ, rfmt, read_accessor, depth))
         return IDL_RETCODE_NO_MEMORY;
 
     return IDL_RETCODE_OK;
   }
 
-  static const char* fmt = "      for (uint32_t i_%1$u = 0; i_%1$u < se_%1$u; i_%1$u++) {\n";
-  if (multi_putf(streams, ALL, fmt, depth))
+  static const char* fmt = "      for (uint32_t i_%1$u = 0; i_%1$u < se_%1$u%2$s; i_%1$u++) {\n";
+  if (multi_putf(streams, CONST, fmt, depth, "")
+   || multi_putf(streams, READ, fmt, depth, " && prop.is_present"))
     return IDL_RETCODE_NO_MEMORY;
 
   sequence_holder_t sh = (sequence_holder_t){ .sequence_accessor = accessor, .depth = depth};
@@ -522,32 +547,28 @@ unroll_sequence(const idl_pstate_t* pstate,
                                "          streamer.status(serialization_status::{T}_bound_exceeded))\n"
                                "        return false;\n"\
                                "      if (!{T}(streamer, se_%1$u))\n"\
-                               "        return false;\n"\
-                               "      if (se_%1$u > 0)\n"\
-                               "      {\n"
+                               "        return false;\n"
                              : "      {\n"\
                                "      uint32_t se_%1$u = uint32_t(%2$s.size());\n"\
                                "      if (!{T}(streamer, se_%1$u))\n"\
-                               "        return false;\n"\
-                               "      if (se_%1$u > 0)\n"\
-                               "      {\n";
+                               "        return false;\n";
   const char* rfmt = maximum ? "      {\n"\
                                "      uint32_t se_%1$u = 0;\n"\
-                               "      if (!read(streamer, se_%1$u))\n"\
-                               "        return false;\n"\
-                               "      if (se_%1$u > %3$u &&\n"
-                               "          streamer.status(serialization_status::read_bound_exceeded))\n"
-                               "        return false;\n"\
-                               "      %2$s.resize(se_%1$u);\n"\
-                               "      if (se_%1$u > 0)\n"\
-                               "      {\n"
+                               "      if (!read(streamer, se_%1$u)) {\n"\
+                               "        prop.is_present = false;\n"\
+                               "      } else {\n"\
+                               "        if (se_%1$u > %3$u &&\n"
+                               "            streamer.status(serialization_status::read_bound_exceeded))\n"
+                               "          return false;\n"\
+                               "        %2$s.resize(se_%1$u);\n"
+                               "      }\n"
                              : "      {\n"\
                                "      uint32_t se_%1$u = 0;\n"\
-                               "      if (!read(streamer, se_%1$u))\n"\
-                               "        return false;\n"\
-                               "      %2$s.resize(se_%1$u);\n"\
-                               "      if (se_%1$u > 0)\n"\
-                               "      {\n";
+                               "      if (!read(streamer, se_%1$u)) {\n"\
+                               "        prop.is_present = false;\n"\
+                               "      } else {\n"\
+                               "        %2$s.resize(se_%1$u);\n"
+                               "      }\n";
   static const char* mfmt = "      {\n"\
                      "      uint32_t se_%1$u = %2$u;\n"\
                      "      if (!max(streamer, uint32_t(0)))\n"\
@@ -562,8 +583,7 @@ unroll_sequence(const idl_pstate_t* pstate,
     return IDL_RETCODE_NO_MEMORY;
 
   //close sequence
-  if (multi_putf(streams, NOMAX,  "      }\n")
-   || multi_putf(streams, ALL, "      }  //end sequence\n"))
+  if (multi_putf(streams, ALL, "      }  //end sequence\n"))
     return IDL_RETCODE_NO_MEMORY;
 
   if (maximum == 0
@@ -605,10 +625,17 @@ insert_array_primitives_copy(
   if (n_arr && IDL_PRINTA(&accessor, get_array_accessor, declarator, &n_arr) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
-  static const char *fmt = "      if (!{T}(streamer, %1$s[0], %2$u))\n"
-                           "        return false;\n";
+  static const char *fmt =
+    "      if (!{T}(streamer, %1$s[0], %2$u))\n"
+    "        return false;\n";
+  static const char *rfmt =
+    "      if (!{T}(streamer, %1$s[0], %2$u)) {\n"
+    "        prop.is_present = false;\n"
+    "        return false;\n"
+    "      }\n";
 
-  if (multi_putf(streams, ALL, fmt, accessor, a_size))
+  if (multi_putf(streams, CONST, fmt, accessor, a_size)
+   || multi_putf(streams, READ, rfmt, accessor, a_size))
     return IDL_RETCODE_NO_MEMORY;
 
   return IDL_RETCODE_OK;
@@ -820,16 +847,16 @@ add_member_start(
    || IDL_PRINTA(&type, get_cpp11_type, type_spec, streams->generator) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
-  if (multi_putf(streams, ALL, "      streamer.start_member(prop, "))
+  if (multi_putf(streams, ALL, "      streamer.start_member(prop"))
     return IDL_RETCODE_NO_MEMORY;
 
   if (is_optional(decl)) {
-    if (multi_putf(streams, ALL, "%1$s.has_value());\n", accessor)
+    if (multi_putf(streams, ALL, ", %1$s.has_value());\n", accessor)
      || multi_putf(streams, (WRITE|MOVE), "      if (%1$s.has_value()) {\n", accessor)
      || putf(&streams->read, "      %1$s = %2$s();\n", accessor, type))
       return IDL_RETCODE_NO_MEMORY;
   } else {
-  if (multi_putf(streams, ALL, "true);\n"))
+  if (multi_putf(streams, ALL, ");\n"))
     return IDL_RETCODE_NO_MEMORY;
   }
 
@@ -849,7 +876,7 @@ add_member_finish(
      || multi_putf(streams, ALL, "      streamer.finish_member(prop, %1$s.has_value());\n", accessor))
       return IDL_RETCODE_NO_MEMORY;
   } else {
-    if (multi_putf(streams, ALL, "      streamer.finish_member(prop, true);\n"))
+    if (multi_putf(streams, ALL, "      streamer.finish_member(prop);\n"))
       return IDL_RETCODE_NO_MEMORY;
   }
 
@@ -937,8 +964,10 @@ process_case(
 
   const char* read_start = simple ? "    {\n"
                                     "      %1$s obj = %2$s;\n"
+                                    "      auto &prop = props;\n"
                                   : "    {\n"
-                                    "      %1$s obj;\n";
+                                    "      %1$s obj;\n"
+                                    "      auto &prop = props;\n";
 
   const char* read_end = single   ? "      instance.%1$s(obj);\n"
                                     "    }\n"
@@ -1134,6 +1163,10 @@ print_constructed_type_close(
     "  streamer.finish_struct(props);\n"
     "  return true;\n"
     "}\n\n";
+  static const char *rfmt =
+    "  streamer.finish_struct(props);\n"
+    "  return props.is_present;\n"
+    "}\n\n";
   static const char *pfmt =
     "    props.m_members_by_seq.push_back(final_entry());\n"
     "    props.m_keys.push_back(final_entry());\n"
@@ -1143,7 +1176,8 @@ print_constructed_type_close(
     "  return props;\n"
     "}\n\n";
 
-  if (multi_putf(streams, ALL, fmt)
+  if (multi_putf(streams, CONST, fmt)
+   || multi_putf(streams, READ, rfmt)
    || putf(&streams->props, pfmt))
     return IDL_RETCODE_NO_MEMORY;
 
@@ -1158,7 +1192,7 @@ print_switchbox_close(struct streams *streams)
     "  }\n";
   static const char *rfmt =
     "      default:\n"
-    "      if (prop.must_understand\n"
+    "      if (prop.must_understand_remote\n"
     "       && streamer.status(must_understand_fail))\n"
     "        return false;\n"
     "      else\n"
@@ -1181,6 +1215,7 @@ print_entry_point_functions(
     "template<typename S, std::enable_if_t<std::is_base_of<cdr_stream, S>::value, bool> = true >\n"
     "bool {T}(S& str, {C}%1$s& instance, bool as_key) {\n"
     "  auto &props = get_type_props<%1$s>();\n"
+    "  props.reset_flags();\n"
     "  str.set_mode(cdr_stream::stream_mode::{T}, as_key);\n"
     "  return {T}(str, instance, props); \n"
     "}\n\n";
@@ -1273,6 +1308,12 @@ process_switch_type_spec(
   const void *node,
   void *user_data)
 {
+  static const char *rfmt =
+    "  auto d = instance._d();\n"
+    "  if (!{T}(streamer, d)) {\n"
+    "    props.is_present = false;\n"
+    "    return false;\n"
+    "  }\n";
   static const char *fmt =
     "  auto d = instance._d();\n"
     "  if (!{T}(streamer, d))\n"
@@ -1289,7 +1330,8 @@ process_switch_type_spec(
   (void)path;
   (void)node;
 
-  if (multi_putf(streams, NOMAX, fmt)
+  if (multi_putf(streams, (WRITE | MOVE), fmt)
+   || multi_putf(streams, READ, rfmt)
    || putf(&streams->max, maxfmt))
     return IDL_RETCODE_NO_MEMORY;
 
@@ -1390,7 +1432,8 @@ process_typedef_decl(
     "template<typename T, std::enable_if_t<std::is_base_of<cdr_stream, T>::value, bool> = true >\n"
     "bool {T}_%1$s(T& streamer, {C}%2$s& instance) {\n"
     "  (void)instance;\n"
-    "  auto &prop = get_type_props<%3$s>();\n";
+    "  auto &prop = get_type_props<%3$s>();\n"
+    "  prop.reset_flags();\n";
   char* name = NULL;
   if (IDL_PRINTA(&name, get_cpp11_name_typedef, declarator, streams->generator) < 0)
     return IDL_RETCODE_NO_MEMORY;
@@ -1413,7 +1456,7 @@ process_typedef_decl(
   if (process_entity(pstate, streams, declarator, type_spec, loc))
     return IDL_RETCODE_NO_MEMORY;
 
-  if (multi_putf(streams, ALL, "  return true;\n}\n\n"))
+  if (multi_putf(streams, ALL, "  return prop.is_present;\n}\n\n"))
     return IDL_RETCODE_NO_MEMORY;
 
   return flush(streams->generator, streams);

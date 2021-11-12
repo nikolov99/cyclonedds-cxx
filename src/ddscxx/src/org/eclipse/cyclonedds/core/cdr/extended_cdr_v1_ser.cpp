@@ -32,6 +32,8 @@ const uint32_t xcdr_v1_stream::pl_extended_flag_must_understand = 0x40000000;
 
 void xcdr_v1_stream::start_member(entity_properties_t &prop, bool present)
 {
+  start_member_impl(prop);
+
   if (!header_necessary(prop))
     return;
 
@@ -53,6 +55,8 @@ void xcdr_v1_stream::start_member(entity_properties_t &prop, bool present)
 
 void xcdr_v1_stream::finish_member(entity_properties_t &prop, bool present)
 {
+  finish_member_impl(prop);
+
   if (m_mode != stream_mode::write)
     return;
 
@@ -137,7 +141,7 @@ void xcdr_v1_stream::read_header(entity_properties_t &props)
 
   props.m_id = smallid & pid_mask;
   props.e_sz = smalllength;
-  props.must_understand = pid_flag_must_understand & smallid;
+  props.must_understand_remote = pid_flag_must_understand & smallid;
   props.implementation_extension = pid_flag_impl_extension & smallid;
   switch (props.m_id) {
     case pid_list_end:
@@ -153,7 +157,7 @@ void xcdr_v1_stream::read_header(entity_properties_t &props)
       read(*this, largelength);
 
       props.e_sz = largelength;
-      props.must_understand = pl_extended_flag_must_understand & memberheader;
+      props.must_understand_remote = pl_extended_flag_must_understand & memberheader;
       props.implementation_extension = pl_extended_flag_impl_extension & memberheader;
       props.m_id = pl_extended_mask & memberheader;
     }
@@ -170,13 +174,13 @@ void xcdr_v1_stream::write_header(entity_properties_t &props)
 
   if (extended_header(props)) {
     uint16_t smallid = pid_extended + pid_flag_must_understand;
-    uint32_t largeid = (props.m_id & pl_extended_mask) + (props.must_understand ? pl_extended_flag_must_understand : 0);
+    uint32_t largeid = (props.m_id & pl_extended_mask) + (props.must_understand_local ? pl_extended_flag_must_understand : 0);
     write(*this, smallid);
     write(*this, uint16_t(8));
     write(*this, largeid);
     write(*this, uint32_t(0));  /* length field placeholder, to be completed by finish_write_header */
   } else {
-    uint16_t smallid = static_cast<uint16_t>(props.m_id + (props.must_understand ? pid_flag_must_understand : 0));
+    uint16_t smallid = static_cast<uint16_t>(props.m_id + (props.must_understand_local ? pid_flag_must_understand : 0));
     write(*this, smallid);
     write(*this, uint16_t(0));  /* length field placeholder, to be completed by finish_write_header */
   }
@@ -205,6 +209,8 @@ void xcdr_v1_stream::finish_write_header(entity_properties_t &props)
 
 void xcdr_v1_stream::finish_struct(entity_properties_t &props)
 {
+  finish_struct_impl(props, m_key ? member_list_type::key : (list_necessary(props) ? member_list_type::member_by_id : member_list_type::member_by_seq));
+
   if (!list_necessary(props))
     return;
 

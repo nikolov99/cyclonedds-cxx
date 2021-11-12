@@ -48,7 +48,7 @@ public:
    * @param[in] prop Properties of the member to start.
    * @param[in] present Whether the entity represented by prop is present, if it is an optional entity.
    */
-  void start_member(entity_properties_t &prop, bool present);
+  void start_member(entity_properties_t &prop, bool present = true);
 
   /**
    * @brief
@@ -59,7 +59,7 @@ public:
    * @param[in] prop Properties of the member to finish.
    * @param[in] present Whether the entity represented by prop is present, if it is an optional entity.
    */
-  void finish_member(entity_properties_t &prop, bool present);
+  void finish_member(entity_properties_t &prop, bool present = true);
 
   /**
    * @brief
@@ -149,10 +149,10 @@ private:
    * preceded by a single boolean, indicating its presence or absence.
    * This function creates a placeholder for this boolean, which will be filled later with finish_optional_tag.
    *
-   * @param[out] props The entity to write the optional flag for.
+   * @param[out] prop The entity to write the optional flag for.
    * @param[in] present Whether the entity represented by prop is present.
    */
-  void write_optional_tag(entity_properties_t &props, bool present);
+  void write_optional_tag(entity_properties_t &prop, bool present);
 
   /**
    * @brief

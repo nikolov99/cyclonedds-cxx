@@ -48,7 +48,7 @@ public:
    * @param[in] prop Properties of the member to start.
    * @param[in] present Whether the entity represented by prop is present, if it is an optional entity.
    */
-  void start_member(entity_properties_t &prop, bool present);
+  void start_member(entity_properties_t &prop, bool present = true);
 
   /**
    * @brief
@@ -59,7 +59,7 @@ public:
    * @param[in] prop Properties of the member to finish.
    * @param[in] present Whether the entity represented by prop is present, if it is an optional entity.
    */
-  void finish_member(entity_properties_t &prop, bool present);
+  void finish_member(entity_properties_t &prop, bool present = true);
 
   /**
    * @brief
@@ -89,9 +89,9 @@ public:
    * @brief
    * Starts a new struct.
    *
-   * As the extended cdr v1 stream does not have anything that requires delimiting between entities, this function does nothing.
+   * @param[in, out] props The property tree to get the next entity from.
    */
-  void start_struct(entity_properties_t &) {;}
+  void start_struct(entity_properties_t &props) { start_struct_impl(props);}
 
   /**
    * @brief

@@ -45,7 +45,7 @@ public:
    *
    * As the basic cdr stream does not have anything that requires delimiting between entities, this function does nothing.
    */
-  void start_member(entity_properties_t &, bool) {;}
+  void start_member(entity_properties_t &prop, bool present = true) { (void) present; start_member_impl(prop);}
 
   /**
    * @brief
@@ -53,7 +53,7 @@ public:
    *
    * As the basic cdr stream does not have anything that requires delimiting between entities, this function does nothing.
    */
-  void finish_member(entity_properties_t &, bool) {;}
+  void finish_member(entity_properties_t &prop, bool present = true) { (void) present; finish_member_impl(prop);}
 
   /**
    * @brief
@@ -61,15 +61,15 @@ public:
    *
    * As the basic cdr stream does not have anything that requires delimiting between entities, this function does nothing.
    */
-  void start_struct(entity_properties_t &) {;}
+  void start_struct(entity_properties_t &props) {start_struct_impl(props);}
 
   /**
    * @brief
    * Finishes the current struct.
    *
-   * As the basic cdr stream does not have anything that requires delimiting between entities, this function does nothing.
+   * When reading, checks whether all fields which must be understood in the current struct are present.
    */
-  void finish_struct(entity_properties_t &) {;}
+  void finish_struct(entity_properties_t &props) {finish_struct_impl(props, m_key ? member_list_type::key : member_list_type::member_by_seq);}
 
   /**
    * @brief
