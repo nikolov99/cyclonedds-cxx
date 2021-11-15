@@ -63,7 +63,7 @@ TEST_F(ExtendedTypes, appendable)
   validate<appendablestruct_smaller, appendablestruct_larger, xcdr_v2_stream>(smaller);
 
   appendablestruct_larger larger('c', 'd', 'e');
-  validate<appendablestruct_larger, appendablestruct_smaller, xcdr_v2_stream>(larger, false);
+  validate<appendablestruct_larger, appendablestruct_smaller, xcdr_v2_stream>(larger);
 }
 
 TEST_F(ExtendedTypes, mutable)

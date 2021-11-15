@@ -30,49 +30,40 @@ const uint32_t xcdr_v1_stream::pl_extended_mask                 = 0x0FFFFFFF;
 const uint32_t xcdr_v1_stream::pl_extended_flag_impl_extension  = 0x80000000;
 const uint32_t xcdr_v1_stream::pl_extended_flag_must_understand = 0x40000000;
 
-void xcdr_v1_stream::start_member(entity_properties_t &prop, bool present)
+void xcdr_v1_stream::start_member(entity_properties_t &prop, bool is_set)
 {
-  start_member_impl(prop);
-
-  if (!header_necessary(prop))
-    return;
-
-  if (prop.p_ext == ext_mutable && !present)
-    return;
-
-  switch (m_mode) {
-    case stream_mode::write:
-      write_header(prop);
-      break;
-    case stream_mode::move:
-    case stream_mode::max:
-      move_header(prop);
-      break;
-    default:
-      break;
+  if (header_necessary(prop) && (prop.p_ext != ext_mutable || is_set)) {
+    switch (m_mode) {
+      case stream_mode::write:
+        write_header(prop);
+        break;
+      case stream_mode::move:
+      case stream_mode::max:
+        move_header(prop);
+        break;
+      default:
+        break;
+    }
   }
+  record_member_start(prop);
 }
 
-void xcdr_v1_stream::finish_member(entity_properties_t &prop, bool present)
+void xcdr_v1_stream::finish_member(entity_properties_t &prop, bool is_set)
 {
-  finish_member_impl(prop);
-
-  if (m_mode != stream_mode::write)
-    return;
-
-  if (!header_necessary(prop))
-    return;
-
-  if (prop.p_ext == ext_mutable && !present)
-    return;
-
-  finish_write_header(prop);
-}
-
-void xcdr_v1_stream::skip_entity(const entity_properties_t &props)
-{
-  incr_position(props.e_sz);
-  alignment(0);
+  if (header_necessary(prop)) {
+    switch (m_mode) {
+      case stream_mode::write:
+        if (prop.p_ext != ext_mutable || is_set)
+          finish_write_header(prop);
+        break;
+      case stream_mode::read:
+        if (!prop.is_present)
+          go_to_next_member(prop);
+        break;
+      default:
+        break;
+    }
+  }
 }
 
 entity_properties_t& xcdr_v1_stream::next_entity(entity_properties_t &props, bool &firstcall)
@@ -184,8 +175,6 @@ void xcdr_v1_stream::write_header(entity_properties_t &props)
     write(*this, smallid);
     write(*this, uint16_t(0));  /* length field placeholder, to be completed by finish_write_header */
   }
-
-  props.e_off = position();
 }
 
 void xcdr_v1_stream::finish_write_header(entity_properties_t &props)

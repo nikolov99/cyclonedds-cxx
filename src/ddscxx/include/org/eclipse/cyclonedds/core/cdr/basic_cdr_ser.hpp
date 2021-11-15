@@ -44,24 +44,20 @@ public:
    * Starts a member.
    *
    * As the basic cdr stream does not have anything that requires delimiting between entities, this function does nothing.
+   *
+   * @param[in, out] prop The member to start.
    */
-  void start_member(entity_properties_t &prop, bool present = true) { (void) present; start_member_impl(prop);}
+  void start_member(entity_properties_t &prop, bool = true) { record_member_start(prop); }
 
   /**
    * @brief
    * Finishes a member.
    *
    * As the basic cdr stream does not have anything that requires delimiting between entities, this function does nothing.
-   */
-  void finish_member(entity_properties_t &prop, bool present = true) { (void) present; finish_member_impl(prop);}
-
-  /**
-   * @brief
-   * Starts a new struct.
    *
-   * As the basic cdr stream does not have anything that requires delimiting between entities, this function does nothing.
+   * @param[in, out] prop The member to finish.
    */
-  void start_struct(entity_properties_t &props) {start_struct_impl(props);}
+  void finish_member(entity_properties_t &prop, bool = true) { if (m_mode == stream_mode::read && !prop.is_present) go_to_next_member(prop); }
 
   /**
    * @brief
@@ -69,15 +65,16 @@ public:
    *
    * When reading, checks whether all fields which must be understood in the current struct are present.
    */
-  void finish_struct(entity_properties_t &props) {finish_struct_impl(props, m_key ? member_list_type::key : member_list_type::member_by_seq);}
+  void finish_struct(entity_properties_t &props) { finish_struct_impl(props, m_key ? member_list_type::key : member_list_type::member_by_seq); }
 
   /**
    * @brief
    * Skips an entity, bypassing the stack.
    *
-   * As the basic cdr stream does not have anything that requires delimiting between entities, this function does nothing.
+   * As the basic cdr stream does not have anything that requires delimiting between entities,
+   * this function is not supported.
    */
-  void skip_entity(const entity_properties_t &) {;}
+  void skip_entity(const entity_properties_t &) { status(serialization_status::unsupported_property); }
 
   /**
    * @brief

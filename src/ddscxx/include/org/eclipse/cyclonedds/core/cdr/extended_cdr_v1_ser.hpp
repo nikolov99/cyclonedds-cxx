@@ -63,16 +63,6 @@ public:
 
   /**
    * @brief
-   * Skips an entity, bypassing the stack.
-   *
-   * Used in skipping fields which are not recognized by a class being deserialized.
-   *
-   * @param[in] props The entity to skip.
-   */
-  void skip_entity(const entity_properties_t &props);
-
-  /**
-   * @brief
    * Returns the next entity to be processed.
    *
    * Depending on the data structure and the streaming mode, either a header is read from the stream, or a
@@ -84,14 +74,6 @@ public:
    * @return The next entity to be processed, or the final entity if the current tree level does not hold more entities.
    */
   entity_properties_t& next_entity(entity_properties_t &props, bool &firstcall);
-
-  /**
-   * @brief
-   * Starts a new struct.
-   *
-   * @param[in, out] props The property tree to get the next entity from.
-   */
-  void start_struct(entity_properties_t &props) { start_struct_impl(props);}
 
   /**
    * @brief

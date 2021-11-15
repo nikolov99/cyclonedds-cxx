@@ -46,9 +46,9 @@ public:
    * Determines whether a header is necessary for this entity through em_header_necessary, and if it is, handles the header.
    *
    * @param[in] prop Properties of the member to start.
-   * @param[in] present Whether the entity represented by prop is present, if it is an optional entity.
+   * @param[in] is_set Whether the entity represented by prop is present, if it is an optional entity.
    */
-  void start_member(entity_properties_t &prop, bool present = true);
+  void start_member(entity_properties_t &prop, bool is_set = true);
 
   /**
    * @brief
@@ -57,17 +57,9 @@ public:
    * Determines whether a header is necessary for this entity through em_header_necessary, and if it is, completes the previous header.
    *
    * @param[in] prop Properties of the member to finish.
-   * @param[in] present Whether the entity represented by prop is present, if it is an optional entity.
+   * @param[in] is_set Whether the entity represented by prop is present, if it is an optional entity.
    */
-  void finish_member(entity_properties_t &prop, bool present = true);
-
-  /**
-   * @brief
-   * Skips an entity, bypassing the stack.
-   *
-   * @param[in] props The entity to skip.
-   */
-  void skip_entity(const entity_properties_t &props);
+  void finish_member(entity_properties_t &prop, bool is_set = true);
 
   /**
    * @brief
@@ -129,17 +121,9 @@ private:
    * @brief
    * Reads an EM-header from the stream.
    *
-   * @param[out] props The entity to read the D-header into.
+   * @param[out] props The entity to read the EM-header into.
    */
   void read_em_header(entity_properties_t &props);
-
-  /**
-   * @brief
-   * Writes a D-header to the stream.
-   *
-   * @param[out] props The entity to write the D-header for.
-   */
-  void write_d_header(entity_properties_t &props);
 
   /**
    * @brief
@@ -147,12 +131,10 @@ private:
    *
    * In the case of an optional field, but not a parameter list, the xcdrv2 spec states that this field should
    * preceded by a single boolean, indicating its presence or absence.
-   * This function creates a placeholder for this boolean, which will be filled later with finish_optional_tag.
    *
-   * @param[out] prop The entity to write the optional flag for.
-   * @param[in] present Whether the entity represented by prop is present.
+   * @param[in] is_set Whether the entity represented by prop is present.
    */
-  void write_optional_tag(entity_properties_t &prop, bool present);
+  void write_optional_tag(bool is_set);
 
   /**
    * @brief
@@ -170,12 +152,6 @@ private:
    * @param[in, out] props The entity to write the EM-header for.
    */
   void write_em_header(entity_properties_t &props);
-
-  /**
-   * @brief
-   * Moves the stream's position by the amount that it would after writing the D-header.
-   */
-  void move_d_header();
 
   /**
    * @brief

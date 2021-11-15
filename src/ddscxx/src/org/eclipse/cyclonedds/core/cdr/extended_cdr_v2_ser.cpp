@@ -33,15 +33,13 @@ const uint32_t xcdr_v2_stream::must_understand = uint32_t(0x80000000);
 
 void xcdr_v2_stream::start_member(entity_properties_t &prop, bool present)
 {
-  start_member_impl(prop);
-
   switch (m_mode) {
     case stream_mode::write:
       if (em_header_necessary(prop)) {
         if (present)
           write_em_header(prop);
       } else if (prop.is_optional) {
-        write_optional_tag(prop, present);
+        write_optional_tag(present);
       }
       break;
     case stream_mode::move:
@@ -56,36 +54,37 @@ void xcdr_v2_stream::start_member(entity_properties_t &prop, bool present)
     default:
       break;
   }
+
+  record_member_start(prop);
 }
 
-void xcdr_v2_stream::finish_member(entity_properties_t &prop, bool present)
+void xcdr_v2_stream::finish_member(entity_properties_t &prop, bool is_set)
 {
-  finish_member_impl(prop);
-
-  if (m_mode == stream_mode::write) {
-    prop.e_sz = static_cast<uint32_t>(position()-prop.e_off);
-    if (em_header_necessary(prop)) {
-      if (present)
-        finish_em_header(prop);
-    }
+  switch (m_mode) {
+    case stream_mode::write:
+      prop.e_sz = static_cast<uint32_t>(position()-prop.e_off);
+      if (em_header_necessary(prop)) {
+        if (is_set)
+          finish_em_header(prop);
+      }
+      break;
+    case stream_mode::read:
+      if (!prop.is_present)
+        go_to_next_member(prop);
+      break;
+    default:
+      break;
   }
 }
 
-void xcdr_v2_stream::write_optional_tag(entity_properties_t &prop, bool present)
+void xcdr_v2_stream::write_optional_tag(bool present)
 {
   write(*this, present ? uint8_t(1) : uint8_t(0));
-  prop.e_off = position();
 }
 
 void xcdr_v2_stream::move_optional_tag()
 {
   move(*this, uint8_t(0));
-}
-
-void xcdr_v2_stream::skip_entity(const entity_properties_t &props)
-{
-  incr_position(props.e_sz);
-  alignment(0);
 }
 
 bool xcdr_v2_stream::bytes_available(const entity_properties_t &props)
@@ -142,7 +141,8 @@ entity_properties_t& xcdr_v2_stream::next_entity(entity_properties_t &props, boo
 
       auto p = std::equal_range(ptr->begin(), ptr->end(), m_current_header, entity_properties_t::member_id_comp);
       if (p.first != ptr->end() && (p.first->m_id == m_current_header.m_id || (!(*p.first) && !m_current_header))) {
-        //copy flags
+        p.first->e_sz = m_current_header.e_sz;
+        p.first->must_understand_remote = m_current_header.must_understand_remote;
         return *(p.first);
       } else {
         return m_current_header;
@@ -200,7 +200,6 @@ void xcdr_v2_stream::read_em_header(entity_properties_t &props)
 void xcdr_v2_stream::read_d_header(entity_properties_t &props)
 {
   read(*this, props.d_sz);
-  props.d_off = position();
 }
 
 bool xcdr_v2_stream::d_header_necessary(const entity_properties_t &props)
@@ -216,25 +215,24 @@ bool xcdr_v2_stream::list_necessary(const entity_properties_t &props)
 
 void xcdr_v2_stream::start_struct(entity_properties_t &props)
 {
-  start_struct_impl(props);
-
-  if (!d_header_necessary(props))
-    return;
-
-  switch (m_mode) {
-    case stream_mode::write:
-      write_d_header(props);
-      break;
-    case stream_mode::move:
-    case stream_mode::max:
-      move_d_header();
-      break;
-    case stream_mode::read:
-      read_d_header(props);
-      break;
-    default:
-      break;
+  if (d_header_necessary(props)) {
+    switch (m_mode) {
+      case stream_mode::write:
+        write(*this, uint32_t(0));
+        break;
+      case stream_mode::move:
+      case stream_mode::max:
+        move(*this, uint32_t(0));
+        break;
+      case stream_mode::read:
+        read_d_header(props);
+        break;
+      default:
+        break;
+    }
   }
+
+  record_struct_start(props);
 }
 
 void xcdr_v2_stream::finish_struct(entity_properties_t &props)
@@ -243,13 +241,6 @@ void xcdr_v2_stream::finish_struct(entity_properties_t &props)
 
   if (d_header_necessary(props) && m_mode == stream_mode::write)
     finish_d_header(props);
-}
-
-void xcdr_v2_stream::write_d_header(entity_properties_t &props)
-{
-  write(*this, uint32_t(0));
-
-  props.d_off = position();
 }
 
 void xcdr_v2_stream::write_em_header(entity_properties_t &props)
@@ -277,13 +268,6 @@ void xcdr_v2_stream::write_em_header(entity_properties_t &props)
   write(*this, mheader);
   if (props.e_bb == bb_unset)
     write(*this, uint32_t(0));
-
-  props.e_off = position();
-}
-
-void xcdr_v2_stream::move_d_header()
-{
-  move(*this, uint32_t(0));
 }
 
 void xcdr_v2_stream::move_em_header(const entity_properties_t &props)

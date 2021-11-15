@@ -90,32 +90,36 @@ void cdr_stream::reset()
   m_stack = std::stack<proplist::iterator>();
 }
 
+void cdr_stream::skip_entity(const entity_properties_t &prop)
+{
+  incr_position(prop.e_sz);
+  alignment(0);
+}
+
 entity_properties_t& cdr_stream::top_of_stack()
 {
   assert(m_stack.size());
   return *(m_stack.top());
 }
 
-void cdr_stream::start_member_impl(entity_properties_t &prop)
+void cdr_stream::record_member_start(entity_properties_t &prop)
 {
-  if (m_mode == stream_mode::read) {
-    prop.e_off = position();
-    prop.is_present = true;
-  }
+  prop.e_off = position();
+  prop.is_present = true;
 }
 
-void cdr_stream::finish_member_impl(entity_properties_t &prop)
+void cdr_stream::go_to_next_member(entity_properties_t &prop)
 {
-  if (prop.e_sz > 0 && m_mode == stream_mode::read && !prop.is_present) {
+  if (prop.e_sz > 0 && m_mode == stream_mode::read) {
     m_position = prop.e_off + prop.e_sz;
     m_current_alignment = 0;
   }
 }
 
-void cdr_stream::start_struct_impl(entity_properties_t &props)
+void cdr_stream::record_struct_start(entity_properties_t &props)
 {
-  if (m_mode == stream_mode::read)
-    props.is_present = true;
+  props.is_present = true;
+  props.d_off = position();
 }
 
 void cdr_stream::finish_struct_impl(entity_properties_t &props, member_list_type list_type)

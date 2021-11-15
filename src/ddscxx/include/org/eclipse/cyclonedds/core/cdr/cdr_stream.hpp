@@ -381,9 +381,9 @@ public:
      * This function is to be implemented in cdr streaming implementations.
      *
      * @param[in] prop Properties of the entity to start.
-     * @param[in] present Whether the entity represented by prop is present, if it is an optional entity.
+     * @param[in] is_set Whether the entity represented by prop is present, if it is an optional entity.
      */
-    virtual void start_member(entity_properties_t &prop, bool present) = 0;
+    virtual void start_member(entity_properties_t &prop, bool is_set) = 0;
 
     /**
      * @brief
@@ -394,9 +394,9 @@ public:
      * This function is to be implemented in cdr streaming implementations.
      *
      * @param[in] prop Properties of the entity to finish.
-     * @param[in] present Whether the entity represented by prop is present, if it is an optional entity.
+     * @param[in] is_set Whether the entity represented by prop is present, if it is an optional entity.
      */
-    virtual void finish_member(entity_properties_t &prop, bool present) = 0;
+    virtual void finish_member(entity_properties_t &prop, bool is_set) = 0;
 
     /**
      * @brief
@@ -405,11 +405,10 @@ public:
      * This function is called by the instance implementation switchbox, when it encounters an id which
      * does not resolve to an id pointing to a member it knows. It will move to the next entity in the
      * stream.
-     * This function is to be implemented in cdr streaming implementations.
      *
-     * @param[in] props The entity to skip/ignore.
+     * @param[in] prop The entity to skip/ignore.
      */
-    virtual void skip_entity(const entity_properties_t &props) = 0;
+    virtual void skip_entity(const entity_properties_t &prop);
 
     /**
      * @brief
@@ -434,7 +433,7 @@ public:
      *
      * @param[in,out] props The entity whose members might be represented by a parameter list.
      */
-    virtual void start_struct(entity_properties_t &props) = 0;
+    virtual void start_struct(entity_properties_t &props) { record_struct_start(props); }
 
     /**
      * @brief
@@ -477,9 +476,27 @@ protected:
       key
     };
 
-    void start_member_impl(entity_properties_t &prop);
-    void finish_member_impl(entity_properties_t &prop);
-    void start_struct_impl(entity_properties_t &props);
+    /**
+     * @brief
+     * Records the start of a member entry.
+     *
+     * Will record the member start and set the member present flag to true.
+     *
+     * @param[in,out] prop The member whose start is recorded.
+     */
+    void record_member_start(entity_properties_t &prop);
+
+    /**
+     * @brief
+     * Skips a member entry.
+     *
+     * In the case a read has failed, this will go to the next member.
+     *
+     * @param[in,out] prop The member who will be skipped.
+     */
+    void go_to_next_member(entity_properties_t &prop);
+
+    void record_struct_start(entity_properties_t &props);
     void finish_struct_impl(entity_properties_t &props, member_list_type list_type);
 
     /**

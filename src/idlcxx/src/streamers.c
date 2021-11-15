@@ -1433,7 +1433,8 @@ process_typedef_decl(
     "bool {T}_%1$s(T& streamer, {C}%2$s& instance) {\n"
     "  (void)instance;\n"
     "  auto &prop = get_type_props<%3$s>();\n"
-    "  prop.reset_flags();\n";
+    "  prop.reset_flags();\n"
+    "  prop.is_present = true;\n";
   char* name = NULL;
   if (IDL_PRINTA(&name, get_cpp11_name_typedef, declarator, streams->generator) < 0)
     return IDL_RETCODE_NO_MEMORY;
@@ -1456,7 +1457,8 @@ process_typedef_decl(
   if (process_entity(pstate, streams, declarator, type_spec, loc))
     return IDL_RETCODE_NO_MEMORY;
 
-  if (multi_putf(streams, ALL, "  return prop.is_present;\n}\n\n"))
+  if (multi_putf(streams, CONST, "  return true;\n}\n\n")
+   || multi_putf(streams, READ, "  return prop.is_present;\n}\n\n"))
     return IDL_RETCODE_NO_MEMORY;
 
   return flush(streams->generator, streams);
