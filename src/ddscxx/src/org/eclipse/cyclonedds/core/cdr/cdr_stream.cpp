@@ -48,6 +48,22 @@ size_t cdr_stream::align(size_t newalignment, bool add_zeroes)
   return tomove;
 }
 
+void cdr_stream::finish_member(entity_properties_t &prop, bool)
+{
+  if (m_mode == stream_mode::read && !prop.is_present)
+    go_to_next_member(prop);
+}
+
+void cdr_stream::finish_struct(entity_properties_t &props)
+{
+  check_struct_completeness(props, m_key ? member_list_type::key : member_list_type::member_by_seq);
+}
+
+bool cdr_stream::inside_buffer(size_t n_bytes)
+{
+  return m_position + n_bytes <= m_buffer_size;
+}
+
 entity_properties_t& cdr_stream::next_prop(entity_properties_t &props, member_list_type list_type, bool &firstcall)
 {
   if (firstcall) {
@@ -96,6 +112,11 @@ void cdr_stream::skip_entity(const entity_properties_t &prop)
   alignment(0);
 }
 
+void cdr_stream::start_member(entity_properties_t &prop, bool)
+{
+  record_member_start(prop);
+}
+
 entity_properties_t& cdr_stream::top_of_stack()
 {
   assert(m_stack.size());
@@ -122,7 +143,7 @@ void cdr_stream::record_struct_start(entity_properties_t &props)
   props.d_off = position();
 }
 
-void cdr_stream::finish_struct_impl(entity_properties_t &props, member_list_type list_type)
+void cdr_stream::check_struct_completeness(entity_properties_t &props, member_list_type list_type)
 {
   if (m_mode != stream_mode::read)
     return;

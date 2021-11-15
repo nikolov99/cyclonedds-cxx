@@ -198,18 +198,19 @@ void xcdr_v1_stream::finish_write_header(entity_properties_t &props)
 
 void xcdr_v1_stream::finish_struct(entity_properties_t &props)
 {
-  finish_struct_impl(props, m_key ? member_list_type::key : (list_necessary(props) ? member_list_type::member_by_id : member_list_type::member_by_seq));
-
-  if (!list_necessary(props))
-    return;
-
   switch (m_mode) {
     case stream_mode::write:
-      write_final_list_entry();
+      if (list_necessary(props))
+        write_final_list_entry();
       break;
     case stream_mode::move:
     case stream_mode::max:
-      move_final_list_entry();
+      if (list_necessary(props))
+        move_final_list_entry();
+      break;
+    case stream_mode::read:
+      check_struct_completeness(props, m_key ? member_list_type::key :
+          (list_necessary(props) ? member_list_type::member_by_id : member_list_type::member_by_seq));
       break;
     default:
       break;

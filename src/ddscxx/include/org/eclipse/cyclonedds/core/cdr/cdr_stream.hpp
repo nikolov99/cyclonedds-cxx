@@ -378,12 +378,12 @@ public:
      *
      * This function is called by next_entity for each entity which is iterated over.
      * Depending on the implementation and mode headers may be read from/written to the stream.
-     * This function is to be implemented in cdr streaming implementations.
+     * This function can be overridden in cdr streaming implementations.
      *
      * @param[in] prop Properties of the entity to start.
      * @param[in] is_set Whether the entity represented by prop is present, if it is an optional entity.
      */
-    virtual void start_member(entity_properties_t &prop, bool is_set) = 0;
+    virtual void start_member(entity_properties_t &prop, bool is_set = true);
 
     /**
      * @brief
@@ -391,12 +391,12 @@ public:
      *
      * This function is called by next_entity for each entity which is iterated over.
      * Depending on the implementation and mode header length fields may be completed.
-     * This function is to be implemented in cdr streaming implementations.
+     * This function can be overridden in cdr streaming implementations.
      *
      * @param[in] prop Properties of the entity to finish.
      * @param[in] is_set Whether the entity represented by prop is present, if it is an optional entity.
      */
-    virtual void finish_member(entity_properties_t &prop, bool is_set) = 0;
+    virtual void finish_member(entity_properties_t &prop, bool is_set = true);
 
     /**
      * @brief
@@ -444,7 +444,7 @@ public:
      *
      * @param[in,out] props The entity whose members might be represented by a parameter list.
      */
-    virtual void finish_struct(entity_properties_t &props) = 0;
+    virtual void finish_struct(entity_properties_t &props);
 
     /**
      * @brief
@@ -455,7 +455,7 @@ public:
      * @retval true The buffer has at least n_bytes to its end.
      * @retval false The buffer does not have at least n_bytes to its end.
      */
-    bool inside_buffer(size_t n_bytes) {return m_position + n_bytes <= m_buffer_size;}
+    bool inside_buffer(size_t n_bytes);
 
 protected:
 
@@ -496,8 +496,16 @@ protected:
      */
     void go_to_next_member(entity_properties_t &prop);
 
+    /**
+     * @brief
+     * Records the start of a struct.
+     *
+     * Will record the struct start and set the struct present flag to true.
+     *
+     * @param[in,out] prop The struct whose start is recorded.
+     */
     void record_struct_start(entity_properties_t &props);
-    void finish_struct_impl(entity_properties_t &props, member_list_type list_type);
+    void check_struct_completeness(entity_properties_t &props, member_list_type list_type);
 
     /**
      * @brief

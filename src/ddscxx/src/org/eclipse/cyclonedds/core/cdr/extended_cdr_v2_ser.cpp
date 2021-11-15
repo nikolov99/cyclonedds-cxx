@@ -237,10 +237,18 @@ void xcdr_v2_stream::start_struct(entity_properties_t &props)
 
 void xcdr_v2_stream::finish_struct(entity_properties_t &props)
 {
-  finish_struct_impl(props, m_key ? member_list_type::key : (list_necessary(props) ? member_list_type::member_by_id : member_list_type::member_by_seq));
-
-  if (d_header_necessary(props) && m_mode == stream_mode::write)
-    finish_d_header(props);
+  switch (m_mode) {
+    case stream_mode::write:
+      if (d_header_necessary(props))
+        finish_d_header(props);
+      break;
+    case stream_mode::read:
+      check_struct_completeness(props, m_key ? member_list_type::key :
+          (list_necessary(props) ? member_list_type::member_by_id : member_list_type::member_by_seq));
+      break;
+    default:
+      break;
+  }
 }
 
 void xcdr_v2_stream::write_em_header(entity_properties_t &props)

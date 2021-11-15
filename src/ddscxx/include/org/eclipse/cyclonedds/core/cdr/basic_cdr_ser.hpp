@@ -41,34 +41,6 @@ public:
 
   /**
    * @brief
-   * Starts a member.
-   *
-   * As the basic cdr stream does not have anything that requires delimiting between entities, this function does nothing.
-   *
-   * @param[in, out] prop The member to start.
-   */
-  void start_member(entity_properties_t &prop, bool = true) { record_member_start(prop); }
-
-  /**
-   * @brief
-   * Finishes a member.
-   *
-   * As the basic cdr stream does not have anything that requires delimiting between entities, this function does nothing.
-   *
-   * @param[in, out] prop The member to finish.
-   */
-  void finish_member(entity_properties_t &prop, bool = true) { if (m_mode == stream_mode::read && !prop.is_present) go_to_next_member(prop); }
-
-  /**
-   * @brief
-   * Finishes the current struct.
-   *
-   * When reading, checks whether all fields which must be understood in the current struct are present.
-   */
-  void finish_struct(entity_properties_t &props) { finish_struct_impl(props, m_key ? member_list_type::key : member_list_type::member_by_seq); }
-
-  /**
-   * @brief
    * Skips an entity, bypassing the stack.
    *
    * As the basic cdr stream does not have anything that requires delimiting between entities,
