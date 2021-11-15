@@ -328,14 +328,6 @@ public:
 
     /**
      * @brief
-     * Returns the entity currently on top of the stack.
-     *
-     * @return The entity currently on top of the stack.
-     */
-    entity_properties_t& top_of_stack();
-
-    /**
-     * @brief
      * Type of streaming operation to be done.
      *
      * @var stream_mode::unset The stream mode is not set.

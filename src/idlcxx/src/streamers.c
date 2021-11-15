@@ -398,13 +398,21 @@ write_base_type_streaming_functions(
   const char* read_accessor,
   instance_location_t loc)
 {
-  const char* fmt =
+  const char* fmt = idl_is_enum(type_spec) ?
+    "      if (!{T}(streamer, %1$s, prop))\n"
+    "        return false;\n" :
     "      if (!{T}(streamer, %1$s))\n"
     "        return false;\n";
-  const char* mfmt =
+  const char* mfmt = idl_is_enum(type_spec) ?
+    "      if (!{T}(streamer, %1$s(), prop))\n"
+    "        return false;\n" :
     "      if (!{T}(streamer, %1$s()))\n"
     "        return false;\n";
-  const char* read_fmt =
+  const char* read_fmt = idl_is_enum(type_spec) ?
+    "      if (!{T}(streamer, %1$s, prop)) {\n"
+    "        prop.is_present = false;\n"
+    "        %1$s = %2$s();\n"
+    "      }\n" :
     "      if (!{T}(streamer, %1$s)) {\n"
     "        prop.is_present = false;\n"
     "        %1$s = %2$s();\n"
@@ -481,12 +489,21 @@ sequence_writes(const idl_pstate_t* pstate,
 
   if ((idl_is_base_type(type_spec) || idl_is_enum(type_spec))
     && (idl_mask(type_spec) & IDL_BOOL) != IDL_BOOL) {
-    static const char* sfmt = "      if (!{T}(streamer, %1$s[0], se_%2$u))\n"
-                              "        return false;\n";
-    static const char* rfmt = "      if (!{T}(streamer, %1$s[0], se_%2$u))\n"
-                              "        prop.is_present = false;\n";
-    static const char* mfmt = "      if (!{T}(streamer, %1$s(), se_%2$u))\n"
-                              "        return false;\n";
+    const char* sfmt = idl_is_enum(type_spec) ?
+                        "      if (!{T}(streamer, %1$s[0], prop, se_%2$u))\n"
+                        "        return false;\n" :
+                        "      if (!{T}(streamer, %1$s[0], se_%2$u))\n"
+                        "        return false;\n";
+    const char* rfmt = idl_is_enum(type_spec) ?
+                        "      if (!{T}(streamer, %1$s[0], prop, se_%2$u))\n"
+                        "        prop.is_present = false;\n" :
+                        "      if (!{T}(streamer, %1$s[0], se_%2$u))\n"
+                        "        prop.is_present = false;\n";
+    const char* mfmt = idl_is_enum(type_spec) ?
+                        "      if (!{T}(streamer, %1$s(), prop, se_%2$u))\n"
+                        "        return false;\n" :
+                        "      if (!{T}(streamer, %1$s(), se_%2$u))\n"
+                        "        return false;\n";
     char* type = NULL;
 
     if (IDL_PRINTA(&type, get_cpp11_type, type_spec, streams->generator) < 0
@@ -617,6 +634,7 @@ insert_array_primitives_copy(
   struct streams *streams,
   const idl_declarator_t* declarator,
   const idl_literal_t *lit,
+  const idl_type_spec_t* type_spec,
   size_t n_arr,
   char *accessor)
 {
@@ -625,10 +643,16 @@ insert_array_primitives_copy(
   if (n_arr && IDL_PRINTA(&accessor, get_array_accessor, declarator, &n_arr) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
-  static const char *fmt =
+  const char *fmt = idl_is_enum(type_spec) ?
+    "      if (!{T}(streamer, %1$s[0], prop, %2$u))\n"
+    "        return false;\n" :
     "      if (!{T}(streamer, %1$s[0], %2$u))\n"
     "        return false;\n";
-  static const char *rfmt =
+  const char *rfmt = idl_is_enum(type_spec) ?
+    "      if (!{T}(streamer, %1$s[0], prop, %2$u)) {\n"
+    "        prop.is_present = false;\n"
+    "        return false;\n"
+    "      }\n" :
     "      if (!{T}(streamer, %1$s[0], %2$u)) {\n"
     "        prop.is_present = false;\n"
     "        return false;\n"
@@ -668,7 +692,7 @@ process_entity(
 
       if (next == NULL &&
           (idl_is_base_type(type_spec) || idl_is_enum(type_spec))) {
-        return insert_array_primitives_copy(streams, declarator, lit, n_arr, accessor);
+        return insert_array_primitives_copy(streams, declarator, lit, type_spec, n_arr, accessor);
       } else if ((ret = unroll_array(streams, accessor, n_arr++)) != IDL_RETCODE_OK) {
         return ret;
       }

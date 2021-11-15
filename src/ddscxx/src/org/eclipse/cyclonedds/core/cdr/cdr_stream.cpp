@@ -117,12 +117,6 @@ void cdr_stream::start_member(entity_properties_t &prop, bool)
   record_member_start(prop);
 }
 
-entity_properties_t& cdr_stream::top_of_stack()
-{
-  assert(m_stack.size());
-  return *(m_stack.top());
-}
-
 void cdr_stream::record_member_start(entity_properties_t &prop)
 {
   prop.e_off = position();
