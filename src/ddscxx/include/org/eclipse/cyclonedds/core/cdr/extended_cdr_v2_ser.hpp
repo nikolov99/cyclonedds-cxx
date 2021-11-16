@@ -48,7 +48,7 @@ public:
    * @param[in] prop Properties of the member to start.
    * @param[in] is_set Whether the entity represented by prop is present, if it is an optional entity.
    */
-  void start_member(entity_properties_t &prop, bool is_set = true);
+  bool start_member(entity_properties_t &prop, bool is_set = true);
 
   /**
    * @brief
@@ -58,8 +58,10 @@ public:
    *
    * @param[in] prop Properties of the member to finish.
    * @param[in] is_set Whether the entity represented by prop is present, if it is an optional entity.
+   *
+   * @return Whether the operation was completed succesfully.
    */
-  void finish_member(entity_properties_t &prop, bool is_set = true);
+  bool finish_member(entity_properties_t &prop, bool is_set = true);
 
   /**
    * @brief
@@ -82,8 +84,10 @@ public:
    * This function is called by the generated streaming functions, and will start a parameter list, if that is relevant for it.
    *
    * @param[in, out] props The entity whose members might be represented by a parameter list.
+   *
+   * @return Whether the operation was completed succesfully.
    */
-  void start_struct(entity_properties_t &props);
+  bool start_struct(entity_properties_t &props);
 
   /**
    * @brief
@@ -92,8 +96,12 @@ public:
    * This function is called by the generated streaming functions, and will finish the current parameter list, if that is relevant for it.
    *
    * @param[in, out] props The entity whose members might be represented by a parameter list.
+   *
+   * @return Whether the operation was completed succesfully.
+   *
+   * @return Whether the operation was completed succesfully.
    */
-  void finish_struct(entity_properties_t &props);
+  bool finish_struct(entity_properties_t &props);
 
 private:
 
@@ -113,17 +121,21 @@ private:
    * @brief
    * Reads a D-header from the stream.
    *
-   * @param[out] props The entity to read the D-header into.
+   * Will put the entity size into the streams m_buffer_end stack
+   *
+   * @return Whether the read was succesful.
    */
-  void read_d_header(entity_properties_t &props);
+  bool read_d_header();
 
   /**
    * @brief
    * Reads an EM-header from the stream.
    *
    * @param[out] props The entity to read the EM-header into.
+   *
+   * @return Whether the read was succesful.
    */
-  void read_em_header(entity_properties_t &props);
+  bool read_em_header(entity_properties_t &props);
 
   /**
    * @brief
@@ -133,8 +145,10 @@ private:
    * preceded by a single boolean, indicating its presence or absence.
    *
    * @param[in] is_set Whether the entity represented by prop is present.
+   *
+   * @return Whether the read was succesful.
    */
-  void write_optional_tag(bool is_set);
+  bool write_optional_tag(bool is_set);
 
   /**
    * @brief
@@ -142,40 +156,50 @@ private:
    *
    * In the case of an optional field, but not a parameter list, the xcdrv2 spec states that this field should
    * preceded by a single boolean, indicating its presence or absence.
+   *
+   * @return Whether the read was succesful.
    */
-  void move_optional_tag();
+  bool move_optional_tag();
 
   /**
    * @brief
    * Writes an EM-header to the stream.
    *
    * @param[in, out] props The entity to write the EM-header for.
+   *
+   * @return Whether the header was read succesfully.
    */
-  void write_em_header(entity_properties_t &props);
+  bool write_em_header(entity_properties_t &props);
 
   /**
    * @brief
    * Moves the stream's position by the amount that it would after writing the EM-header.
    *
    * @param[in] props The entity properties, used to determine whether the extended length field is necessary.
+   *
+   * @return Whether the header was read succesfully.
    */
-  void move_em_header(const entity_properties_t &props);
+  bool move_em_header(const entity_properties_t &props);
 
   /**
    * @brief
    * Finishes the write operation of the D-header.
    *
    * @param[in, out] props The entity whose D-header to finish.
+   *
+   * @return Whether the header was read succesfully.
    */
-  void finish_d_header(entity_properties_t &props);
+  bool finish_d_header(entity_properties_t &props);
 
   /**
    * @brief
    * Finishes the write operation of the EM-header.
    *
    * @param[in, out] props The entity whose EM-header to finish.
+   *
+   * @return Whether the header was read succesfully.
    */
-  void finish_em_header(entity_properties_t &props);
+  bool finish_em_header(entity_properties_t &props);
 
   /**
    * @brief
@@ -209,19 +233,6 @@ private:
    * @return Whether a list is necessary for this entity.
    */
   bool list_necessary(const entity_properties_t &props);
-
-  /**
-   * @brief
-   * Checks whether a delimited cdr stream is not being read out of bounds.
-   *
-   * This function will return true if enough bytes are available for reading another header.
-   * It will also set the invalid_dl_entry flag if the end of the bounds has been reached.
-   *
-   * @param[in] props The entity whose members might be represented by a parameter list.
-   *
-   * @return Whether enough bytes are available for another header.
-   */
-  bool bytes_available(const entity_properties_t &props);
 };
 
 /**

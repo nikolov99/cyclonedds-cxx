@@ -60,9 +60,11 @@ public:
 TEST_F(ExtendedTypes, appendable)
 {
   appendablestruct_smaller smaller('c', 'd');
+  validate<appendablestruct_smaller, appendablestruct_larger, xcdr_v1_stream>(smaller, false);
   validate<appendablestruct_smaller, appendablestruct_larger, xcdr_v2_stream>(smaller);
 
   appendablestruct_larger larger('c', 'd', 'e');
+  validate<appendablestruct_larger, appendablestruct_smaller, xcdr_v1_stream>(larger);
   validate<appendablestruct_larger, appendablestruct_smaller, xcdr_v2_stream>(larger);
 }
 

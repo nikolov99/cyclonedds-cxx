@@ -196,7 +196,6 @@ void entity_properties::reset_flags()
   is_present = false;
   ignore = false;
   d_off = 0;
-  d_sz = 0;
   e_off = 0;
   e_sz = 0;
 

@@ -149,12 +149,10 @@ TEST_F(CDRStreamer, cdr_boundary)
   str.set_buffer(buffer.data(), 12);
 
   ASSERT_FALSE(write(str, BS, false)); /*this write should fail, as the buffer limit is too small*/
-  ASSERT_EQ(str.status(), serialization_status::buffer_size_exceeded);
 
   str.reset();
 
   ASSERT_FALSE(read(str, BS2, false)); /*this read should fail too, as the buffer limit is too small*/
-  ASSERT_EQ(str.status(), serialization_status::buffer_size_exceeded);
 
   str.set_buffer(buffer.data(), 32);
 

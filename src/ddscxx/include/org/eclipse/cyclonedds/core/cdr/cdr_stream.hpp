@@ -125,7 +125,6 @@ constexpr endianness native_endianness() { return endianness(DDSRT_ENDIAN); }
  * @var serialization_status::invalid_dl_entry The serialization has attempted to read outside bounds set by the entity delimiter.
  * @var serialization_status::unsupported_property A streamer has attempted to stream a field having a property which is not supported by the streaming method.
  * @var serialization_status::must_understand_fail A struct being read contains a field that it must understand but does not recognize.
- * @var serialization_status::buffer_size_exceeded The streamer has attempted to access outside its buffer's bounds.
  */
 enum serialization_status {
   move_bound_exceeded   = 0x1 << 0,
@@ -135,8 +134,7 @@ enum serialization_status {
   invalid_dl_entry      = 0x1 << 4,
   illegal_field_value   = 0x1 << 5,
   unsupported_property  = 0x1 << 6,
-  must_understand_fail  = 0x1 << 7,
-  buffer_size_exceeded  = 0x1 << 8
+  must_understand_fail  = 0x1 << 7
 };
 
 /**
@@ -178,6 +176,19 @@ public:
      * @return The value the alignment has been set to.
      */
     size_t alignment(size_t newalignment) { return m_current_alignment = newalignment; }
+
+    /**
+     * @brief
+     * Checks whether a delimited cdr stream is not being read out of bounds.
+     *
+     * This function will return true if N bytes can be read from the stream.
+     *
+     * @param[in] props The entity whose members might be represented by a parameter list.
+     * @param[in] N The number of bytes requested.
+     *
+     * @return Whether enough bytes are available for another header.
+     */
+    bool bytes_available(size_t N) const;
 
     /**
      * @brief
@@ -243,7 +254,7 @@ public:
      * @retval nullptr If the current buffer is not set, or if the cursor offset is not valid.
      * @return The current cursor pointer.
      */
-    char* get_cursor() const { return ((m_position != SIZE_MAX && m_buffer != nullptr) ? (m_buffer + m_position) : nullptr); }
+    char* get_cursor() const { return ((position() != SIZE_MAX && m_buffer != nullptr) ? (m_buffer + position()) : nullptr); }
 
     /**
      * @brief
@@ -288,9 +299,9 @@ public:
      * @param[in] newalignment The new alignment to align the stream to.
      * @param[in] add_zeroes Whether the bytes that the cursor moves need to be zeroed.
      *
-     * @return The number of bytes that the cursor was moved.
+     * @return Whether the cursor could be moved by the required amount.
      */
-    size_t align(size_t newalignment, bool add_zeroes);
+    bool align(size_t newalignment, bool add_zeroes);
 
     /**
      * @brief
@@ -374,8 +385,10 @@ public:
      *
      * @param[in] prop Properties of the entity to start.
      * @param[in] is_set Whether the entity represented by prop is present, if it is an optional entity.
+     *
+     * @return Whether the operation was completed succesfully.
      */
-    virtual void start_member(entity_properties_t &prop, bool is_set = true);
+    virtual bool start_member(entity_properties_t &prop, bool is_set = true);
 
     /**
      * @brief
@@ -387,8 +400,10 @@ public:
      *
      * @param[in] prop Properties of the entity to finish.
      * @param[in] is_set Whether the entity represented by prop is present, if it is an optional entity.
+     *
+     * @return Whether the operation was completed succesfully.
      */
-    virtual void finish_member(entity_properties_t &prop, bool is_set = true);
+    virtual bool finish_member(entity_properties_t &prop, bool is_set = true);
 
     /**
      * @brief
@@ -424,8 +439,10 @@ public:
      * I.E. starting a new parameter list, writing headers.
      *
      * @param[in,out] props The entity whose members might be represented by a parameter list.
+     *
+     * @return Whether the operation was completed succesfully.
      */
-    virtual void start_struct(entity_properties_t &props) { record_struct_start(props); }
+    virtual bool start_struct(entity_properties_t &props);
 
     /**
      * @brief
@@ -435,19 +452,10 @@ public:
      * I.E. finishing headers, writing length fields.
      *
      * @param[in,out] props The entity whose members might be represented by a parameter list.
-     */
-    virtual void finish_struct(entity_properties_t &props);
-
-    /**
-     * @brief
-     * Function for checking whether we are not yet about to reach the end of the buffer.
      *
-     * @param[in] n_bytes The number of bytes we want in the buffer.
-     *
-     * @retval true The buffer has at least n_bytes to its end.
-     * @retval false The buffer does not have at least n_bytes to its end.
+     * @return Whether the operation was completed succesfully.
      */
-    bool inside_buffer(size_t n_bytes);
+    virtual bool finish_struct(entity_properties_t &props);
 
 protected:
 
@@ -494,9 +502,19 @@ protected:
      *
      * Will record the struct start and set the struct present flag to true.
      *
-     * @param[in,out] prop The struct whose start is recorded.
+     * @param[in,out] props The struct whose start is recorded.
      */
     void record_struct_start(entity_properties_t &props);
+
+    /**
+     * @brief
+     * Checks the struct for completeness.
+     *
+     * Checks whether all fields which must be understood are present.
+     *
+     * @param[in,out] props The struct whose start is recorded.
+     * @param[in] list_type Which list must be checked for entries.
+     */
     void check_struct_completeness(entity_properties_t &props, member_list_type list_type);
 
     /**
@@ -518,7 +536,6 @@ protected:
     endianness m_stream_endianness,               /**< the endianness of the stream*/
         m_local_endianness = native_endianness(); /**< the local endianness*/
     size_t m_position = 0,                        /**< the current offset position in the stream*/
-        m_buffer_size = 0,                        /**< the size of the current buffer*/
         m_max_alignment,                          /**< the maximum bytes that can be aligned to*/
         m_current_alignment = 1;                  /**< the current alignment*/
     char* m_buffer = nullptr;                     /**< the current buffer in use*/
@@ -533,6 +550,7 @@ protected:
     entity_properties_t m_current_header;         /**< Container for headers being read from a stream*/
 
     DDSCXX_WARNING_MSVC_OFF(4251)
+    std::stack<size_t> m_buffer_end;                /**< the end of reading at the current level*/
     std::stack<proplist::iterator> m_stack;       /**< Stack of iterators currently being handled*/
     DDSCXX_WARNING_MSVC_ON(4251)
 };
@@ -567,14 +585,10 @@ template<typename S, typename T, std::enable_if_t<std::is_arithmetic<T>::value
                                                && std::is_base_of<cdr_stream, S>::value, bool> = true >
 bool read(S &str, T& toread, size_t N = 1)
 {
-  if (str.position() == SIZE_MAX)
+  if (str.position() == SIZE_MAX
+   || !str.align(sizeof(T), false)
+   || !str.bytes_available(sizeof(T)*N))
     return false;
-
-  if (!str.inside_buffer(sizeof(T)*N) &&
-      str.status(serialization_status::buffer_size_exceeded))
-    return false;
-
-  str.align(sizeof(T), false);
 
   auto from = str.get_cursor();
   T *to = &toread;
@@ -646,14 +660,10 @@ template<typename S, typename T, std::enable_if_t<std::is_arithmetic<T>::value
                                                && std::is_base_of<cdr_stream, S>::value, bool> = true >
 bool write(S& str, const T& towrite, size_t N = 1)
 {
-  if (str.position() == SIZE_MAX)
+  if (str.position() == SIZE_MAX
+   || !str.align(sizeof(T), true)
+   || !str.bytes_available(sizeof(T)*N))
     return false;
-
-  if (!str.inside_buffer(sizeof(T)*N) &&
-      str.status(serialization_status::buffer_size_exceeded))
-    return false;
-
-  str.align(sizeof(T), true);
 
   auto to = reinterpret_cast<T*>(str.get_cursor());
   const T *from = &towrite;
@@ -728,7 +738,8 @@ bool move(S& str, const T&, size_t N = 1)
   if (str.position() == SIZE_MAX)
     return true;
 
-  str.align(sizeof(T), false);
+  if (!str.align(sizeof(T), false))
+    return false;
 
   str.incr_position(sizeof(T)*N);
 
@@ -793,11 +804,8 @@ bool read_string(S& str, T& toread, size_t N)
 
   uint32_t string_length = 0;
 
-  if (!read(str, string_length))
-    return false;
-
-  if (!str.inside_buffer(string_length) &&
-      str.status(serialization_status::buffer_size_exceeded))
+  if (!read(str, string_length)
+   || !str.bytes_available(string_length))
     return false;
 
   if (string_length == 0
@@ -845,10 +853,8 @@ bool write_string(S& str, const T& towrite, size_t N)
    && str.status(serialization_status::write_bound_exceeded))
       return false;
 
-  write(str, uint32_t(string_length));
-
-  if (!str.inside_buffer(string_length)
-   && str.status(serialization_status::buffer_size_exceeded))
+  if (!write(str, uint32_t(string_length))
+   || !str.bytes_available(string_length))
     return false;
 
   memcpy(str.get_cursor(), towrite.c_str(), string_length);
@@ -888,7 +894,8 @@ bool move_string(S& str, const T& toincr, size_t N)
    && str.status(serialization_status::move_bound_exceeded))
       return false;
 
-  move(str, uint32_t());
+  if (!move(str, uint32_t()))
+    return false;
 
   str.incr_position(string_length);
 

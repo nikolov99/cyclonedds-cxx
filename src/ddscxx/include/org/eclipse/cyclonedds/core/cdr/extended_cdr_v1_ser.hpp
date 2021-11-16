@@ -47,8 +47,10 @@ public:
    *
    * @param[in] prop Properties of the member to start.
    * @param[in] present Whether the entity represented by prop is present, if it is an optional entity.
+   *
+   * @return Whether the operation was completed succesfully.
    */
-  void start_member(entity_properties_t &prop, bool present = true);
+  bool start_member(entity_properties_t &prop, bool present = true);
 
   /**
    * @brief
@@ -58,8 +60,10 @@ public:
    *
    * @param[in] prop Properties of the member to finish.
    * @param[in] present Whether the entity represented by prop is present, if it is an optional entity.
+   *
+   * @return Whether the operation was completed succesfully.
    */
-  void finish_member(entity_properties_t &prop, bool present = true);
+  bool finish_member(entity_properties_t &prop, bool present = true);
 
   /**
    * @brief
@@ -82,8 +86,10 @@ public:
    * Adds the final parameter list entry if necessary when writing to the stream.
    *
    * @param[in, out] props The property tree to get the next entity from.
+   *
+   * @return Whether the operation was completed succesfully.
    */
-  void finish_struct(entity_properties_t &props);
+  bool finish_struct(entity_properties_t &props);
 
 private:
 
@@ -125,9 +131,12 @@ private:
    * If header_necessary returns true for a field, then this function needs to be called first to read the
    * header from stream and to allow the streamer to determine what to do with the field.
    *
-   * @param[out] props The header to read into.
+   * @param[in] props The current entity the being processed.
+   * @param[out] out The header to read into.
+   *
+   * @return Whether the header was read succesfully.
    */
-  void read_header(entity_properties_t &props);
+  bool read_header(entity_properties_t &out);
 
   /**
    * @brief
@@ -137,8 +146,10 @@ private:
    * header to the stream before the contents of the field are written.
    *
    * @param[in, out] props The properties of the entity.
+   *
+   * @return Whether the header was read succesfully.
    */
-  void write_header(entity_properties_t &props);
+  bool write_header(entity_properties_t &props);
 
   /**
    * @brief
@@ -147,20 +158,26 @@ private:
    * Goes back to the offset of the length field that was unfinished in 
    *
    * @param[in, out] props The properties of the entity.
+   *
+   * @return Whether the header was read succesfully.
    */
-  void finish_write_header(entity_properties_t &props);
+  bool finish_write_header(entity_properties_t &props);
 
   /**
    * @brief
    * Writes the terminating entry in a parameter list.
+   *
+   * @return Whether the header was read succesfully.
    */
-  void write_final_list_entry();
+  bool write_final_list_entry();
 
   /**
    * @brief
    * Moves the cursor as if writing the terminating entry in a parameter list.
+   *
+   * @return Whether the header was read succesfully.
    */
-  void move_final_list_entry();
+  bool move_final_list_entry();
 
   /**
    * @brief
@@ -170,8 +187,10 @@ private:
    * have taken up, if it would have been written.
    *
    * @param[in] props The entity to move the cursor by.
+   *
+   * @return Whether the header was read succesfully.
    */
-  void move_header(const entity_properties_t &props);
+  bool move_header(const entity_properties_t &props);
 
   /**
    * @brief
