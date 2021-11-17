@@ -97,9 +97,7 @@ public:
    *
    * @param[in, out] props The entity whose members might be represented by a parameter list.
    *
-   * @return Whether the operation was completed succesfully.
-   *
-   * @return Whether the operation was completed succesfully.
+   * @return Whether the struct is complete and correct.
    */
   bool finish_struct(entity_properties_t &props);
 
@@ -175,11 +173,9 @@ private:
    * @brief
    * Moves the stream's position by the amount that it would after writing the EM-header.
    *
-   * @param[in] props The entity properties, used to determine whether the extended length field is necessary.
-   *
    * @return Whether the header was read succesfully.
    */
-  bool move_em_header(const entity_properties_t &props);
+  bool move_em_header();
 
   /**
    * @brief

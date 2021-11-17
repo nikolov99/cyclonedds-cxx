@@ -39,7 +39,7 @@ bool cdr_stream::align(size_t newalignment, bool add_zeroes)
       (m_mode == stream_mode::read || m_mode == stream_mode::write)) {
     if (!bytes_available(tomove))
       return false;
-    if (tomove && add_zeroes) {
+    if (add_zeroes) {
       auto cursor = get_cursor();
       assert(cursor);
       memset(cursor, 0, tomove);
@@ -53,6 +53,9 @@ bool cdr_stream::align(size_t newalignment, bool add_zeroes)
 
 bool cdr_stream::finish_member(entity_properties_t &prop, bool)
 {
+  if (abort_status())
+    return false;
+
   if (!prop.is_present) {
     if (m_mode == stream_mode::read)
       go_to_next_member(prop);
@@ -67,7 +70,7 @@ bool cdr_stream::finish_struct(entity_properties_t &props)
 {
   check_struct_completeness(props, m_key ? member_list_type::key : member_list_type::member_by_seq);
 
-  return props.is_present;
+  return !abort_status() && props.is_present;
 }
 
 entity_properties_t& cdr_stream::next_prop(entity_properties_t &props, member_list_type list_type, bool &firstcall)
@@ -104,11 +107,22 @@ entity_properties_t& cdr_stream::next_prop(entity_properties_t &props, member_li
   return entity;
 }
 
-bool cdr_stream::bytes_available(size_t N) const
+bool cdr_stream::bytes_available(size_t N, bool peek)
 {
-  if (!m_buffer_end.size())
-    return false;
-  return position()+N <= m_buffer_end.top();
+  assert(m_buffer_end.size());
+  if (position()+N > m_buffer_end.top()) {
+    switch (m_mode) {
+      case stream_mode::read:
+        return !peek && status(read_bound_exceeded);
+        break;
+      case stream_mode::write:
+        return !peek && status(write_bound_exceeded);
+        break;
+      default:
+        break;
+    }
+  }
+  return !abort_status();
 }
 
 void cdr_stream::reset()
@@ -149,7 +163,7 @@ void cdr_stream::go_to_next_member(entity_properties_t &prop)
 {
   if (prop.e_sz > 0 && m_mode == stream_mode::read) {
     position(prop.e_off + prop.e_sz);
-    alignment(0);
+    alignment(0);  //we made a jump, so we do not know the current alignment
   }
 }
 

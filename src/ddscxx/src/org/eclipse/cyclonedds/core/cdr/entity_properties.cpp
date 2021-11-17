@@ -112,12 +112,26 @@ void entity_properties::set_key_values(const key_endpoint &endpoints)
   }
 }
 
+bool entity_properties::requires_xtypes()
+{
+  if (xtypes_necessary || is_optional || e_ext != ext_final)
+    return true;
+
+  for (auto &member:m_members_by_seq)
+    if (member.requires_xtypes())
+      return true;
+
+  return false;
+}
+
 void entity_properties::finish(const key_endpoint &keys)
 {
   set_key_values(keys);
 
-  for (auto &member:m_members_by_seq)
+  xtypes_necessary = requires_xtypes();
+  for (auto &member:m_members_by_seq) {
     member.propagate_flags();
+  }
 
   populate_from_seq();
 

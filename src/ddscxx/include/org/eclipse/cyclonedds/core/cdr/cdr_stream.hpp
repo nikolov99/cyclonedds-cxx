@@ -183,12 +183,12 @@ public:
      *
      * This function will return true if N bytes can be read from the stream.
      *
-     * @param[in] props The entity whose members might be represented by a parameter list.
      * @param[in] N The number of bytes requested.
+     * @param[in] peek Whether this is true access, or just a "peek".
      *
      * @return Whether enough bytes are available for another header.
      */
-    bool bytes_available(size_t N) const;
+    bool bytes_available(size_t N = 1, bool peek = false);
 
     /**
      * @brief
@@ -453,7 +453,7 @@ public:
      *
      * @param[in,out] props The entity whose members might be represented by a parameter list.
      *
-     * @return Whether the operation was completed succesfully.
+     * @return Whether the struct is complete and correct.
      */
     virtual bool finish_struct(entity_properties_t &props);
 

@@ -87,7 +87,7 @@ public:
    *
    * @param[in, out] props The property tree to get the next entity from.
    *
-   * @return Whether the operation was completed succesfully.
+   * @return Whether the struct is complete and correct.
    */
   bool finish_struct(entity_properties_t &props);
 
@@ -121,6 +121,8 @@ private:
    * Determines whether a parameter list is necessary.
    *
    * @param[in] props The entity whose members might be represented by a parameter list.
+   *
+   * @return Whether a parameter list is necessary for the entity.
    */
   bool list_necessary(const entity_properties_t &props);
 

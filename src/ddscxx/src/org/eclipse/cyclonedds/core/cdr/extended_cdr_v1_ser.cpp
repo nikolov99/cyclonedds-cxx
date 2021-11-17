@@ -43,6 +43,9 @@ bool xcdr_v1_stream::start_member(entity_properties_t &prop, bool is_set)
         if (!move_header(prop))
           return false;
         break;
+      case stream_mode::read:
+        m_buffer_end.push(position() + prop.e_sz);
+        break;
       default:
         break;
     }
@@ -54,6 +57,9 @@ bool xcdr_v1_stream::start_member(entity_properties_t &prop, bool is_set)
 
 bool xcdr_v1_stream::finish_member(entity_properties_t &prop, bool is_set)
 {
+  if (abort_status())
+    return false;
+
   if (header_necessary(prop)) {
     switch (m_mode) {
       case stream_mode::write:
@@ -61,8 +67,7 @@ bool xcdr_v1_stream::finish_member(entity_properties_t &prop, bool is_set)
           return finish_write_header(prop);
         break;
       case stream_mode::read:
-        if (!prop.is_present)
-          go_to_next_member(prop);
+        m_buffer_end.pop();
         break;
       default:
         break;
@@ -74,6 +79,9 @@ bool xcdr_v1_stream::finish_member(entity_properties_t &prop, bool is_set)
 
 entity_properties_t& xcdr_v1_stream::next_entity(entity_properties_t &props, bool &firstcall)
 {
+  if (abort_status())
+    return m_final;
+
   member_list_type ml = member_list_type::member_by_seq;
   if (m_key)
     ml = member_list_type::key;
@@ -85,9 +93,9 @@ entity_properties_t& xcdr_v1_stream::next_entity(entity_properties_t &props, boo
     while (1) {  //using while loop to prevent recursive calling, which could lead to stack overflow
       auto &prop = next_prop(props, ml, firstcall);
 
-      entity_properties_t temp;
       if (prop.is_optional) {
-        if (!read_header(temp))  //no error code?
+        entity_properties_t temp;
+        if (!read_header(temp))
           break;
 
         prop.e_sz = temp.e_sz;
@@ -113,10 +121,13 @@ entity_properties_t& xcdr_v1_stream::next_entity(entity_properties_t &props, boo
         continue;
 
       auto p = std::equal_range(ptr->begin(), ptr->end(), m_current_header, entity_properties_t::member_id_comp);
-      if (p.first != ptr->end() && (p.first->m_id == m_current_header.m_id || (!(*p.first) && !m_current_header)))
+      if (p.first != ptr->end() && (p.first->m_id == m_current_header.m_id || (!(*p.first) && !m_current_header))) {
+        p.first->must_understand_remote = m_current_header.must_understand_remote;
+        p.first->e_sz = m_current_header.e_sz;
         return *(p.first);
-      else
+      } else {
         return m_current_header;
+      }
     }
   }
   return m_final;
@@ -230,7 +241,7 @@ bool xcdr_v1_stream::finish_struct(entity_properties_t &props)
       break;
   }
 
-  return props.is_present;
+  return !abort_status() && props.is_present;
 }
 
 bool xcdr_v1_stream::list_necessary(const entity_properties_t &props)

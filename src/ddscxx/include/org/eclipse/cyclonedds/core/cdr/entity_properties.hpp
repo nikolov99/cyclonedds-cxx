@@ -104,6 +104,7 @@ struct OMG_DDS_API entity_properties
   uint32_t m_id = 0; /**< The member id of the entity, it is the global field by which the entity is identified. */
   bool must_understand_local = false; /**< If the reading end cannot parse a field with this header, it must discard the entire object. */
   bool must_understand_remote = false; /**< If the reading end cannot parse a field with this header, it must discard the entire object. */
+  bool xtypes_necessary = false; /**< Is set if any of the members of this entity require xtypes support.*/
   bool implementation_extension = false;
   bool is_last = false; /**< Indicates terminating entry for reading/writing entities, will cause the current subroutine to end and decrement the stack.*/
   bool ignore = false; /**< Indicates that this field must be ignored.*/
@@ -197,6 +198,9 @@ struct OMG_DDS_API entity_properties
    * @param[in] prefix Which prefix preceeds the printed entity information.
    */
   void print(bool recurse = true, size_t depth = 0, const char *prefix = "") const;
+
+
+  bool requires_xtypes();
 private:
 
   /**
