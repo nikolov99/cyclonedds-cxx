@@ -1023,6 +1023,8 @@ process_case(
 static const idl_declarator_t*
 resolve_member(const idl_struct_t *type_spec, const char *member_name)
 {
+  type_spec = idl_unalias(type_spec, 0u);
+
   if (idl_is_struct(type_spec)) {
     const idl_struct_t *_struct = (const idl_struct_t *)type_spec;
     const idl_member_t *member = NULL;
