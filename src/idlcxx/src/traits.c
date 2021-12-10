@@ -155,9 +155,9 @@ emit_traits(
     "{\n"
     "  return \"%2$s\";\n" /* skip preceeding "::" according to convention */
     "}\n\n"
-    "template <> inline ddsi_sertype* TopicTraits<%1$s>::getSerType()\n"
+    "template <> inline ddsi_sertype* TopicTraits<%1$s>::getSerType(encoding_version kind)\n"
     "{\n"
-    "  return static_cast<ddsi_sertype*>(new ddscxx_sertype<%1$s>());\n"
+    "  return static_cast<ddsi_sertype*>(new ddscxx_sertype<%1$s>(kind));\n"
     "}\n\n";
   static const char *keylessfmt =
     "template <> constexpr bool TopicTraits<%1$s>::isKeyless()\n"

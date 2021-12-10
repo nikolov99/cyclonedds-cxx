@@ -119,13 +119,15 @@ public:
     /**
      * @brief Returns an instance of ddsi_sertype for TOPIC.
      *
-     * Used by CycloneDDS to get a sertype, which contains the functions used by CycloneDDS which are specific to TOPIC.
+     * Used by CycloneDDS-CXX to get a sertype, which contains the functions used by CycloneDDS which are specific to TOPIC.
      * This trait is always generated for user-defined types, and this function is just a placeholder.
      *
+     * @param[in] kind The kind of sertype to create (xcdr or basic).
      * @return A pointer to a new dssi_sertype.
      */
-    static inline ddsi_sertype *getSerType()
+    static inline ddsi_sertype *getSerType(encoding_version kind = minXCDRVersion())
     {
+        (void) kind;
         return nullptr;
     }
 
@@ -179,6 +181,17 @@ public:
     static constexpr extensibility getExtensibility()
     {
       return extensibility::ext_final;
+    }
+
+    /**
+     * @brief Returns a pointer to the derived sertype.
+     *
+     * @return The pointer to the derived sertype.
+     */
+    static inline struct ddsi_sertype* deriveSertype(const struct ddsi_sertype */*, dds_data_representation_id_t data_representation, dds_type_consistency_enforcement_qospolicy_t tqos*/)
+    {
+      //determine the xcdr version based on the data_representation_id and the consistency enforcement policy
+      return getSerType(minXCDRVersion());
     }
 };
 
