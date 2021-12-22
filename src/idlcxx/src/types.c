@@ -327,6 +327,9 @@ emit_struct(
   if (fputs("\n};\n\n", gen->header.handle) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
+  fmt = "std::ostream& operator << (std::ostream& o, const %s& sample);\n\n";
+  if (idl_fprintf(gen->header.handle, fmt, name) < 0)
+    return IDL_RETCODE_NO_MEMORY;
   return IDL_RETCODE_OK;
 }
 
@@ -365,6 +368,10 @@ emit_enum(
   if (fputs("};\n\n", gen->header.handle) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
+  name = get_cpp11_name(node);
+  fmt = "std::ostream& operator << (std::ostream& o, const %s& sample);\n";
+  if (idl_fprintf(gen->header.handle, fmt, name) < 0)
+    return IDL_RETCODE_NO_MEMORY;
   return IDL_VISIT_DONT_RECURSE;
 }
 
