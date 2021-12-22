@@ -206,6 +206,7 @@ static int get_cpp11_templ_type(
       if ((cnt = get_cpp11_type(type, (size_t)cnt+1, sequence->type_spec, gen)) >= 0)
         cnt = idl_snprintf(str, size, fmt, type, sequence->maximum);
       free(type);
+
       return cnt;
     }
     case IDL_STRING: {
@@ -215,6 +216,7 @@ static int get_cpp11_templ_type(
         fmt = gen->bounded_string_format;
       else
         fmt = gen->string_format;
+
       return idl_snprintf(str, size, fmt, string->maximum);
     }
     default:
@@ -682,8 +684,7 @@ generate_includes(const idl_pstate_t *pstate, struct generator *generator)
   visitor.accept[IDL_ACCEPT_SEQUENCE] = &register_types;
   visitor.accept[IDL_ACCEPT_CONST] = &register_types;
   visitor.accept[IDL_ACCEPT_UNION] = &register_union;
-  assert(pstate->sources);
-  sources[0] = pstate->sources->path->name;
+  assert(pstate->sources);  sources[0] = pstate->sources->path->name;
   visitor.sources = sources;
   if ((ret = idl_visit(pstate, pstate->root, &visitor, generator)))
     return ret;
@@ -841,6 +842,9 @@ idl_retcode_t generate(const idl_pstate_t *pstate)
 
   memset(&gen, 0, sizeof(gen));
   gen.path = file;
+
+// Niko
+  printf("Build file: %s \n", file);
 
   sep = dir[0] == '\0' ? "" : "/";
   if (idl_asprintf(&gen.header.path, "%s%s%s.hpp", dir, sep, basename) < 0)

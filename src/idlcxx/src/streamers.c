@@ -1533,7 +1533,59 @@ process_enum(
 
   if (putf(&str->props,"  }\n}\n\n"))
     return IDL_RETCODE_NO_MEMORY;
+  // ------------------------------------------
+  // 21.12.2021, Niko
+  static const char *fmt2 = "std::ostream& operator << (std::ostream& o, const %s& sample)%s";
+  if (putf(
+          &str->props,
+          fmt2,
+          fullname,
+          " {\n"
+          //"  StreamFlagSaver flag_saver (o);\n"
+          //"  switch (sample.underlying()) {\n",
+          "  switch (sample) {\n"
+          )
+        || idl_fprintf(gen->header.handle, fmt2, fullname, ";\n\n") < 0
+        )
+    return IDL_RETCODE_NO_MEMORY;
 
+  //array of values already encountered
+  n_already_encountered = 0;
+
+  IDL_FOREACH(enumerator, _enum->enumerators) {
+    enum_name = get_cpp11_name(enumerator);
+    value = enumerator->value.value;
+    bool already_present = false;
+    for (uint32_t i = 0; i < n_already_encountered && !already_present; i++) {
+      if (value == already_encountered[i])
+        already_present = true;
+    }
+    if (already_present)
+      continue;
+
+    if (n_already_encountered >= 232)  //protection against buffer overflow in already_encountered[]
+      return IDL_RETCODE_ILLEGAL_EXPRESSION;
+    already_encountered[n_already_encountered++] = value;
+
+    if (putf(&str->props, "    case %s::%s:\n"
+                          //"    o << \"%s::%s\" << \" \";\n"
+                          "    o << \"%s\";\n"
+                          "    break;\n",
+                          fullname, enum_name,
+                          //fullname, enum_name
+                          enum_name
+                          ) < 0)
+      return IDL_RETCODE_NO_MEMORY;
+  }
+
+  if (putf(&str->props,
+          "    }\n"
+          "    return o;\n"
+          "}\n"
+          "\n"
+          ) < 0)
+    return IDL_RETCODE_NO_MEMORY;
+  // ------------------------------------------
   return IDL_RETCODE_OK;
 }
 

@@ -358,13 +358,47 @@ emit_enum(
     fmt = (value == skip) ? "%s%s" : "%s%s = %" PRIu32 "\n";
     if (idl_fprintf(gen->header.handle, fmt, sep, name, value) < 0)
       return IDL_RETCODE_NO_MEMORY;
+
+
+    // Niko
+    //idl_fprintf(gen->header.handle, "Niko, emit_enum", sep, name, value);
+
+
+
     skip = value + 1;
     sep = ",\n  ";
   }
 
   if (fputs("};\n\n", gen->header.handle) < 0)
     return IDL_RETCODE_NO_MEMORY;
+// ---------------------------------------
+// Niko
+  /*name = get_cpp11_name(node);
+  if (idl_fprintf(gen->header.handle, "enum class %s\n{\n", name) < 0)
+    return IDL_RETCODE_NO_MEMORY;
 
+  IDL_FOREACH(enumerator, _enum->enumerators) {
+    name = get_cpp11_name(enumerator);
+    value = enumerator->value.value;
+    fmt = (value == skip) ? "%s%s" : "%s%s = %" PRIu32 "\n";
+    if (idl_fprintf(gen->header.handle, fmt, sep, name, value) < 0)
+      return IDL_RETCODE_NO_MEMORY;
+
+
+
+    // Niko
+    //idl_fprintf(gen->header.handle, "Niko, emit_enum", sep, name, value);
+
+
+
+    skip = value + 1;
+    sep = ",\n  ";
+  }
+
+  if (fputs("};\n\n", gen->header.handle) < 0)
+    return IDL_RETCODE_NO_MEMORY;
+*/
+// ---------------------------------------
   return IDL_VISIT_DONT_RECURSE;
 }
 
