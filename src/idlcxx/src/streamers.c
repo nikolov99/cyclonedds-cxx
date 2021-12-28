@@ -1230,6 +1230,125 @@ print_entry_point_functions(
 return IDL_RETCODE_OK;
 }
 
+// -------------------------------------
+// 23.12.2021, Niko, new special func
+static idl_retcode_t
+emit_ostream_struct_members(
+  const idl_pstate_t *pstate,
+  bool revisit,
+  const idl_path_t *path,
+  const void *node,
+  void *user_data)
+{
+  // Вместо генератор, подавам streams 
+  //struct generator *gen = user_data;
+  struct streams *streams = user_data;
+
+  const idl_type_spec_t *type_spec;
+  char *type;
+  const char *name, *fmt;
+
+  (void)pstate;
+  (void)revisit;
+  (void)path;
+
+  name = get_cpp11_name(node);
+
+  if (idl_is_array(node))
+    type_spec = node;
+  else
+    type_spec = idl_type_spec(node);
+
+  //if (IDL_PRINTA(&type, get_cpp11_type, type_spec, gen) < 0)
+    //return IDL_RETCODE_NO_MEMORY;
+
+  type_spec = idl_unalias(type_spec, 0);
+  /*if (is_optional(node))
+    fmt = "  const %3$s<%1$s>& %2$s() const { return this->%2$s_; }\n"
+          "  %3$s<%1$s>& %2$s() { return this->%2$s_; }\n"
+          "  void %2$s(const %3$s<%1$s>& _val_) { this->%2$s_ = _val_; }\n"
+          "  void %2$s(%3$s<%1$s>&& _val_) { this->%2$s_ = _val_; }\n";
+  else if (idl_is_base_type(type_spec) || idl_is_enum(type_spec))
+    fmt = "  %1$s %2$s() const { return this->%2$s_; }\n"
+          "  %1$s& %2$s() { return this->%2$s_; }\n"
+          "  void %2$s(%1$s _val_) { this->%2$s_ = _val_; }\n";
+  else
+    fmt = "  const %1$s& %2$s() const { return this->%2$s_; }\n"
+          "  %1$s& %2$s() { return this->%2$s_; }\n"
+          "  void %2$s(const %1$s& _val_) { this->%2$s_ = _val_; }\n"
+          "  void %2$s(%1$s&& _val_) { this->%2$s_ = _val_; }\n";
+
+  if (idl_fprintf(gen->header.handle, fmt, type, name, gen->optional_format) < 0)
+    return IDL_RETCODE_NO_MEMORY;*/
+  // -----------------------
+  /*if (is_optional(node))
+    putf(&streams->props, "--> is_optional\n");
+  else if (idl_is_base_type(type_spec) || idl_is_enum(type_spec))
+    putf(&streams->props, "--> is base or enum\n");
+  else
+    putf(&streams->props, "--> other\n");*/
+  // -----------------------
+  bool bValidType = 
+                    is_optional(node) ||
+                    idl_is_base_type(type_spec) ||
+                    idl_is_enum(type_spec);
+  if (bValidType) {
+    if (putf(&streams->props,
+            "    o << \"%s: \" << sample.%s()<<\", \";\n",
+            name,
+            name    
+        ))
+      return IDL_RETCODE_NO_MEMORY;
+  };
+  // -----------------------
+  return IDL_RETCODE_OK;
+}
+
+// Niko, 23.12.2021, new func, Supports std::ostream print struct members
+static idl_retcode_t
+print_entry_ostream_struct_members(
+  const idl_pstate_t* pstate,
+  struct streams *streams,
+  const idl_struct_t *_struct,
+  char *fullname)
+{
+  // ---------------------
+  idl_retcode_t ret;
+  idl_visitor_t visitor;
+  memset(&visitor, 0, sizeof(visitor));
+  visitor.visit = IDL_DECLARATOR;
+
+  if (putf(&streams->props,
+          "std::ostream& operator << (std::ostream& o, const %s& sample)\n"
+          "{\n",
+        fullname))
+    return IDL_RETCODE_NO_MEMORY;
+
+  //if (putf(&streams->props, " StreamFlagSaver flag_saver (o);\n"))
+    //return IDL_RETCODE_NO_MEMORY;
+
+  if (putf(&streams->props, "    o <<\"[\";\n"))
+    return IDL_RETCODE_NO_MEMORY;
+
+  // user_data is changed to streams, for cpp output instead of hpp: putf(&streams->props
+  // void* user_data = _struct;
+  void* user_data = streams;
+  visitor.accept[IDL_ACCEPT_DECLARATOR] = &emit_ostream_struct_members;
+  if (_struct->members && (ret = idl_visit(pstate, _struct->members, &visitor, user_data)))
+    return ret;
+  // ---------------------
+  if (putf(&streams->props,
+          "    o <<\"]\";\n"
+          "    return o;\n"
+          "}\n\n"
+      ))
+    return IDL_RETCODE_NO_MEMORY;
+
+  return IDL_RETCODE_OK;
+  // ---------------------
+}
+// -------------------------------------
+
 static idl_retcode_t
 process_struct_contents(
   const idl_pstate_t* pstate,
@@ -1285,11 +1404,16 @@ process_struct(
   if (IDL_PRINTA(&fullname, get_cpp11_fully_scoped_name, node, streams->generator) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
-  if (revisit) {
+   if (revisit) {
     if (print_switchbox_close(user_data)
      || print_constructed_type_close(user_data, node)
      || print_entry_point_functions(streams, fullname))
       return IDL_RETCODE_NO_MEMORY;
+
+    // ----------------------
+    // Niko, 23.12.2021, ostream support struct members, writes in cpp file
+    print_entry_ostream_struct_members(pstate, streams, _struct, fullname);
+    // ----------------------
 
     return flush(streams->generator, streams);
   } else {
@@ -1299,7 +1423,6 @@ process_struct(
      || (ret = print_switchbox_open(user_data))
      || (ret = process_struct_contents(pstate, revisit, path, _struct, streams)))
       return ret;
-
     return IDL_VISIT_REVISIT;
   }
 }
@@ -1534,7 +1657,7 @@ process_enum(
   if (putf(&str->props,"  }\n}\n\n"))
     return IDL_RETCODE_NO_MEMORY;
   // ------------------------------------------
-  // 21.12.2021, Niko
+  // 21.12.2021, ostream support Enum consts, writes in hpp and cpp file
   static const char *fmt2 = "std::ostream& operator << (std::ostream& o, const %s& sample)%s";
   if (putf(
           &str->props,

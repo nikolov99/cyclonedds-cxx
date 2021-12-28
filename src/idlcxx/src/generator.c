@@ -843,9 +843,6 @@ idl_retcode_t generate(const idl_pstate_t *pstate)
   memset(&gen, 0, sizeof(gen));
   gen.path = file;
 
-// Niko
-  printf("Build file: %s \n", file);
-
   sep = dir[0] == '\0' ? "" : "/";
   if (idl_asprintf(&gen.header.path, "%s%s%s.hpp", dir, sep, basename) < 0)
     goto err_hdr;
