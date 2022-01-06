@@ -724,6 +724,16 @@ generate_includes(const idl_pstate_t *pstate, struct generator *generator)
       incs[len++] = generator->union_include;
       incs[len++] = "<dds/core/Exception.hpp>\n";
     }
+
+    // ------------------------
+    // Niko, 04.01.2022
+    //includes <iostream> in hpp file
+    bool bPrint_hpp = false;
+    if (bPrint_hpp)
+      incs[len++] = "<iostream>\n";
+    // ------------------------
+
+
     if (generator->uses_optional)
       incs[len++] = generator->optional_include;
 
@@ -757,6 +767,17 @@ idl_retcode_t generate_nosetup(const idl_pstate_t *pstate, struct generator *gen
     goto err_print;
   if ((ret = print_impl_header(gen->impl.handle, gen->path, gen->impl.path, gen->header.path)))
     goto err_print;
+
+
+
+  // Niko, 04.01.2022
+  //includes <iostream> in cpp file
+  bool bPrint_hpp = false;
+  if (!bPrint_hpp) {
+    if (idl_fprintf(gen->impl.handle, "#include <iostream>\n\n") < 0)
+      return IDL_RETCODE_NO_MEMORY;
+  };
+
   if ((ret = print_guard_if(gen->header.handle, guard)))
     goto err_print;
   if ((ret = generate_includes(pstate, gen)))
@@ -791,6 +812,9 @@ const char *opt_inc = "<optional>";
 const char *uni_tmpl = "std::variant";
 const char *uni_get_tmpl = "std::get";
 const char *uni_inc = "<variant>";
+
+// Niko, 04.01.2022
+const char *iostr_inc = "<iostream>";
 
 static const char *arr_toks[] = { "TYPE", "DIMENSION", NULL };
 static const char *arr_flags[] = { "s", PRIu32, NULL };

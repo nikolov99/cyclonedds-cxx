@@ -329,9 +329,19 @@ emit_struct(
 
   // -----------------------------
   // Niko, 23.12.2021, ostream support struct members, writes in hpp file
-  static const char *fmt2 = "std::ostream& operator << (std::ostream& o, const %s& sample);\n\n";
-  if (idl_fprintf(gen->header.handle, fmt2, name) < 0)
-    return IDL_RETCODE_NO_MEMORY;
+  // 04.01.2022
+   // ---------------------
+  // true - hpp, false - cpp
+  // Ако функцията за отпечатване на мембърите на структурата се пишат в hpp файла,
+  // тогава подръжката на реда по-долу е на друго място, да се търси по bPrint_hpp
+  bool bPrint_hpp = false;
+  // ---------------------
+  if (!bPrint_hpp) {
+    //static const char *fmt2 = "std::ostream& operator << (std::ostream& o, const ::CyclonTestData::%s& sample);\n\n";
+    static const char *fmt2 = "std::ostream& operator << (std::ostream& o, const %s& sample);\n\n";
+    if (idl_fprintf(gen->header.handle, fmt2, name) < 0)
+      return IDL_RETCODE_NO_MEMORY;
+  };
   // -----------------------------
 
   return IDL_RETCODE_OK;
@@ -373,6 +383,13 @@ emit_enum(
   if (fputs("};\n\n", gen->header.handle) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
+  // ------------------------------------------
+  // 21.12.2021, ostream support Enum consts, writes in hpp file
+  name = get_cpp11_name(node);
+  static const char *fmt2 = "std::ostream& operator << (std::ostream& o, const %s& sample);\n";
+  if (idl_fprintf(gen->header.handle, fmt2, name) < 0)
+    return IDL_RETCODE_NO_MEMORY;
+  // ------------------------------------------
   return IDL_VISIT_DONT_RECURSE;
 }
 

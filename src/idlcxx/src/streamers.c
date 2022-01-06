@@ -126,6 +126,8 @@ struct streams {
   idl_buffer_t move;
   idl_buffer_t max;
   idl_buffer_t props;
+  // Niko, 04.01.2022
+  idl_buffer_t self_src;
 };
 
 static void setup_streams(struct streams* str, struct generator* gen)
@@ -147,6 +149,9 @@ static void cleanup_streams(struct streams* str)
     free(str->max.data);
   if (str->props.data)
     free(str->props.data);
+  // Niko, 04.01.2022
+  if (str->self_src.data)
+    free(str->self_src.data);
 }
 
 static idl_retcode_t flush_stream(idl_buffer_t* str, FILE* f)
@@ -1240,6 +1245,7 @@ emit_ostream_struct_members(
   const void *node,
   void *user_data)
 {
+  // ---------------------
   // Вместо генератор, подавам streams 
   //struct generator *gen = user_data;
   struct streams *streams = user_data;
@@ -1259,49 +1265,23 @@ emit_ostream_struct_members(
   else
     type_spec = idl_type_spec(node);
 
-  //if (IDL_PRINTA(&type, get_cpp11_type, type_spec, gen) < 0)
-    //return IDL_RETCODE_NO_MEMORY;
-
   type_spec = idl_unalias(type_spec, 0);
-  /*if (is_optional(node))
-    fmt = "  const %3$s<%1$s>& %2$s() const { return this->%2$s_; }\n"
-          "  %3$s<%1$s>& %2$s() { return this->%2$s_; }\n"
-          "  void %2$s(const %3$s<%1$s>& _val_) { this->%2$s_ = _val_; }\n"
-          "  void %2$s(%3$s<%1$s>&& _val_) { this->%2$s_ = _val_; }\n";
-  else if (idl_is_base_type(type_spec) || idl_is_enum(type_spec))
-    fmt = "  %1$s %2$s() const { return this->%2$s_; }\n"
-          "  %1$s& %2$s() { return this->%2$s_; }\n"
-          "  void %2$s(%1$s _val_) { this->%2$s_ = _val_; }\n";
-  else
-    fmt = "  const %1$s& %2$s() const { return this->%2$s_; }\n"
-          "  %1$s& %2$s() { return this->%2$s_; }\n"
-          "  void %2$s(const %1$s& _val_) { this->%2$s_ = _val_; }\n"
-          "  void %2$s(%1$s&& _val_) { this->%2$s_ = _val_; }\n";
-
-  if (idl_fprintf(gen->header.handle, fmt, type, name, gen->optional_format) < 0)
-    return IDL_RETCODE_NO_MEMORY;*/
-  // -----------------------
-  /*if (is_optional(node))
-    putf(&streams->props, "--> is_optional\n");
-  else if (idl_is_base_type(type_spec) || idl_is_enum(type_spec))
-    putf(&streams->props, "--> is base or enum\n");
-  else
-    putf(&streams->props, "--> other\n");*/
   // -----------------------
   bool bValidType = 
                     is_optional(node) ||
                     idl_is_base_type(type_spec) ||
                     idl_is_enum(type_spec);
   if (bValidType) {
-    if (putf(&streams->props,
-            "    o << \"%s: \" << sample.%s()<<\", \";\n",
-            name,
-            name    
-        ))
-      return IDL_RETCODE_NO_MEMORY;
+      if (putf(&streams->self_src, // streams->props
+              "    o << \"%s: \" << sample.%s()<<\", \";\n",
+              name,
+              name
+          ))
+        return IDL_RETCODE_NO_MEMORY;
   };
   // -----------------------
   return IDL_RETCODE_OK;
+  // ---------------------
 }
 
 // Niko, 23.12.2021, new func, Supports std::ostream print struct members
@@ -1310,40 +1290,103 @@ print_entry_ostream_struct_members(
   const idl_pstate_t* pstate,
   struct streams *streams,
   const idl_struct_t *_struct,
+  const void* node,
   char *fullname)
 {
+  // ---------------------
+  // true - hpp, false - cpp
+  bool bPrint_hpp = false;
+  // ---------------------
+  struct generator *gen = streams->generator;
   // ---------------------
   idl_retcode_t ret;
   idl_visitor_t visitor;
   memset(&visitor, 0, sizeof(visitor));
   visitor.visit = IDL_DECLARATOR;
-
-  if (putf(&streams->props,
-          "std::ostream& operator << (std::ostream& o, const %s& sample)\n"
-          "{\n",
-        fullname))
-    return IDL_RETCODE_NO_MEMORY;
-
-  //if (putf(&streams->props, " StreamFlagSaver flag_saver (o);\n"))
-    //return IDL_RETCODE_NO_MEMORY;
-
-  if (putf(&streams->props, "    o <<\"[\";\n"))
-    return IDL_RETCODE_NO_MEMORY;
-
-  // user_data is changed to streams, for cpp output instead of hpp: putf(&streams->props
-  // void* user_data = _struct;
-  void* user_data = streams;
-  visitor.accept[IDL_ACCEPT_DECLARATOR] = &emit_ostream_struct_members;
-  if (_struct->members && (ret = idl_visit(pstate, _struct->members, &visitor, user_data)))
-    return ret;
   // ---------------------
-  if (putf(&streams->props,
-          "    o <<\"]\";\n"
-          "    return o;\n"
-          "}\n\n"
-      ))
-    return IDL_RETCODE_NO_MEMORY;
+  if (bPrint_hpp) {
+    // ---------------------
+    // 04.01.2022
+    if (idl_fprintf(gen->header.handle,
+            "std::ostream& operator << (std::ostream& o, const %s& sample)\n"
+            "{\n",
+          fullname)<0)
+      return IDL_RETCODE_NO_MEMORY;
 
+    //if (putf(&streams->props, " StreamFlagSaver flag_saver (o);\n"))
+      //return IDL_RETCODE_NO_MEMORY;
+
+    if (idl_fprintf(gen->header.handle, "    o <<\"[\";\n")<0)
+      return IDL_RETCODE_NO_MEMORY;
+
+    // Мога да пиша и така: putf(&streams->props
+    // user_data is changed to streams, for cpp output instead of hpp: putf(&streams->props
+    // void* user_data = _struct;
+    void* user_data = streams;
+    visitor.accept[IDL_ACCEPT_DECLARATOR] = &emit_ostream_struct_members;
+    if (_struct->members && (ret = idl_visit(pstate, _struct->members, &visitor, user_data)))
+      return ret;
+    // ---------------------
+    if (idl_fprintf(gen->header.handle,
+            "    o <<\"]\";\n"
+            "    return o;\n"
+            "}\n\n"
+        )<0)
+      return IDL_RETCODE_NO_MEMORY;
+    // ---------------------
+  }
+  else
+  {
+    // ---------------------
+    // 04.01.2022
+    // Just for test:
+    // Връща ::NamsSpace::Name
+    //get_cpp11_fully_scoped_name(szNameSpace, nFullNameLen+1, node, NULL); // user_data
+    //get_cpp11_name_typedef(szNameSpace, nFullNameLen+1, node, NULL); // user_data
+    idl_node_t *nodeCurr = (idl_node_t*)node;
+    if (nodeCurr->parent)
+      nodeCurr = nodeCurr->parent;
+    const char* szNameSpace = get_cpp11_name(nodeCurr);
+
+    if (putf(&streams->self_src,
+        "namespace %s\n"
+        "{\n",
+        szNameSpace))
+      return IDL_RETCODE_NO_MEMORY;
+    // ---------------------
+    if (putf(&streams->self_src,
+            "std::ostream& operator << (std::ostream& o, const %s& sample)\n"
+            "{\n",
+          fullname))
+      return IDL_RETCODE_NO_MEMORY;
+
+    //if (putf(&streams->props, " StreamFlagSaver flag_saver (o);\n"))
+      //return IDL_RETCODE_NO_MEMORY;
+
+    if (putf(&streams->self_src, "    o <<\"[\";\n"))
+      return IDL_RETCODE_NO_MEMORY;
+
+    // user_data is changed to streams, for cpp output instead of hpp: putf(&streams->props
+    // void* user_data = _struct;
+    void* user_data = streams;
+    visitor.accept[IDL_ACCEPT_DECLARATOR] = &emit_ostream_struct_members;
+    if (_struct->members && (ret = idl_visit(pstate, _struct->members, &visitor, user_data)))
+      return ret;
+    // ---------------------
+    if (putf(&streams->self_src,
+            "    o <<\"]\";\n"
+            "    return o;\n"
+            "}\n"
+        ))
+      return IDL_RETCODE_NO_MEMORY;
+    // ---------------------
+    if (putf(&streams->self_src,
+        "}\n\n",
+        fullname))
+      return IDL_RETCODE_NO_MEMORY;
+    // ---------------------
+  };
+  // ---------------------
   return IDL_RETCODE_OK;
   // ---------------------
 }
@@ -1412,7 +1455,7 @@ process_struct(
 
     // ----------------------
     // Niko, 23.12.2021, ostream support struct members, writes in cpp file
-    print_entry_ostream_struct_members(pstate, streams, _struct, fullname);
+    print_entry_ostream_struct_members(pstate, streams, _struct, node, fullname);
     // ----------------------
 
     return flush(streams->generator, streams);
@@ -1658,9 +1701,43 @@ process_enum(
     return IDL_RETCODE_NO_MEMORY;
   // ------------------------------------------
   // 21.12.2021, ostream support Enum consts, writes in hpp and cpp file
+  const char* szNameSpace;
+  idl_node_t *nodeCurr;
+  // --------------------
+  nodeCurr = (idl_node_t*)node;
+  int nMaxNameSpaces = 5;
+  int nNumNameSpaces = 0;
+  bool bProcess = true;
+  char arrNameSpaces[5][100];
+  memset(arrNameSpaces, 0, sizeof(arrNameSpaces));
+  do {
+    if (nodeCurr->parent) {
+      nodeCurr = nodeCurr->parent;
+      szNameSpace = get_cpp11_name(nodeCurr);
+
+      strcpy(arrNameSpaces[nNumNameSpaces], szNameSpace);
+
+      nNumNameSpaces++;
+      if (nNumNameSpaces>nMaxNameSpaces)
+        bProcess = false;
+    }
+    else
+      bProcess = false;
+  }
+  while (bProcess);
+  if (nNumNameSpaces<=1)
+    return IDL_RETCODE_NO_MEMORY;
+  for (int nArrPos = nNumNameSpaces-1; nArrPos>=0; nArrPos--) {
+      if (putf(&str->self_src,
+          "namespace %s\n"
+          "{\n",
+          arrNameSpaces[nArrPos])) // fullname
+        return IDL_RETCODE_NO_MEMORY;
+  };
+  // --------------------
   static const char *fmt2 = "std::ostream& operator << (std::ostream& o, const %s& sample)%s";
   if (putf(
-          &str->props,
+          &str->self_src, // str->props
           fmt2,
           fullname,
           " {\n"
@@ -1690,23 +1767,33 @@ process_enum(
       return IDL_RETCODE_ILLEGAL_EXPRESSION;
     already_encountered[n_already_encountered++] = value;
 
-    if (putf(&str->props, "    case %s::%s:\n"
+    if (putf(&str->self_src, "    case %s::%s:\n"
                           //"    o << \"%s::%s\" << \" \";\n"
                           "    o << \"%s\";\n"
                           "    break;\n",
                           fullname, enum_name,
                           //fullname, enum_name
                           enum_name
-                          ) < 0)
+                          ))
       return IDL_RETCODE_NO_MEMORY;
   }
 
-  if (putf(&str->props,
+  if (putf(&str->self_src,
           "    }\n"
           "    return o;\n"
           "}\n"
-          "\n"
-          ) < 0)
+          ))
+    return IDL_RETCODE_NO_MEMORY;
+  // --------------------
+  for (int n=1; n<=(nNumNameSpaces); n++) {
+    if (putf(&str->self_src,
+          "}\n",
+          fullname))
+      return IDL_RETCODE_NO_MEMORY;
+  };
+  if (putf(&str->self_src,
+        "\n",
+        fullname))
     return IDL_RETCODE_NO_MEMORY;
   // ------------------------------------------
   return IDL_RETCODE_OK;
@@ -1757,6 +1844,15 @@ generate_streamers(const idl_pstate_t* pstate, struct generator *gen)
   if (idl_fprintf(gen->header.handle, "%s", fmt) < 0
    || idl_fprintf(gen->impl.handle, "%s", fmt) < 0)
     return IDL_RETCODE_NO_MEMORY;
+
+
+
+  // ----------------------
+  // Niko, 04.02.2022
+  flush_stream(&streams.self_src, gen->impl.handle);
+  // ----------------------
+
+
 
   cleanup_streams(&streams);
 
