@@ -39,7 +39,7 @@
 
 #include <dds/core/QosProvider.hpp>
 
-#include <dds/wrap/OstreamWrap.hpp>
+#include <../ddscxx/org/eclipse/cyclonedds/core/OstreamWrap.hpp>
 
 #ifdef _WIN32
 #pragma warning ( pop )

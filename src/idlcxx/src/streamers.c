@@ -1296,7 +1296,7 @@ emit_ostream_struct_members(
 
       if (putf(&streams->self_src,
               "        for (const auto &it : sample.%s().value()) {\n"
-              "            o << it << \",\";\n"
+              "            o << it << \", \";\n"
               "        };\n",
               name
           ))
@@ -1324,7 +1324,7 @@ emit_ostream_struct_members(
           ))
         return IDL_RETCODE_NO_MEMORY;        
       if (putf(&streams->self_src,
-          "    o << Wrap(sample.%s());\n",
+          "    o << org::eclipse::cyclonedds::core::OstreamWrap(sample.%s());\n",
           name
           ))
         return IDL_RETCODE_NO_MEMORY;
@@ -1366,7 +1366,7 @@ emit_ostream_struct_members(
         ))
       return IDL_RETCODE_NO_MEMORY;        
     if (putf(&streams->self_src,
-        "    o << Wrap(sample.%s());\n",
+        "    o << org::eclipse::cyclonedds::core::OstreamWrap(sample.%s());\n",
         name
         ))
       return IDL_RETCODE_NO_MEMORY;
@@ -1383,7 +1383,7 @@ emit_ostream_struct_members(
         ))
       return IDL_RETCODE_NO_MEMORY;        
     if (putf(&streams->self_src,
-        "    o << Wrap(sample.%s());\n",
+        "    o << org::eclipse::cyclonedds::core::OstreamWrap(sample.%s());\n",
         name
         ))
       return IDL_RETCODE_NO_MEMORY;
