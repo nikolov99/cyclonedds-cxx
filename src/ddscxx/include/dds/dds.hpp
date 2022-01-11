@@ -39,6 +39,8 @@
 
 #include <dds/core/QosProvider.hpp>
 
+#include <dds/wrap/OstreamWrap.hpp>
+
 #ifdef _WIN32
 #pragma warning ( pop )
 #pragma warning( push )
