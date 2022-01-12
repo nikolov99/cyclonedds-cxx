@@ -1294,16 +1294,14 @@ emit_ostream_struct_members(
           ))
         return IDL_RETCODE_NO_MEMORY;
 
-      if (putf(&streams->self_src,
-              "        for (const auto &it : sample.%s().value()) {\n"
-              "            o << it << \", \";\n"
-              "        };\n",
-              name
-          ))
-        return IDL_RETCODE_NO_MEMORY;
+    if (putf(&streams->self_src,
+        "        o << org::eclipse::cyclonedds::core::OstreamWrap(sample.%s().value());\n",
+        name
+        ))
+      return IDL_RETCODE_NO_MEMORY;        
 
       if (putf(&streams->self_src,
-              "        o << \"end vec.\";\n"
+              "        o << \"end vec, \";\n"
               "    }\n"
           ))
         return IDL_RETCODE_NO_MEMORY;
@@ -1314,11 +1312,10 @@ emit_ostream_struct_members(
               name
           ))
         return IDL_RETCODE_NO_MEMORY;
-      // ---------------------------------
     }
     else
     if (bIsArray) {
-      if (putf(&streams->self_src,
+      /*if (putf(&streams->self_src,
               "    o << \"arr: %s:\";\n",
               name
           ))
@@ -1330,6 +1327,37 @@ emit_ostream_struct_members(
         return IDL_RETCODE_NO_MEMORY;
       if (putf(&streams->self_src,
               "    o << \"end arr, \";\n"
+          ))
+        return IDL_RETCODE_NO_MEMORY;*/
+
+      if (putf(&streams->self_src,
+              "    if (sample.%s().has_value()) {\n",
+              name
+          ))
+        return IDL_RETCODE_NO_MEMORY;
+
+      if (putf(&streams->self_src,
+              "        o << \"arr: %s:\";\n",
+              name
+          ))
+        return IDL_RETCODE_NO_MEMORY;
+
+    if (putf(&streams->self_src,
+        "        o << org::eclipse::cyclonedds::core::OstreamWrap(sample.%s().value());\n",
+        name
+        ))
+      return IDL_RETCODE_NO_MEMORY;        
+
+      if (putf(&streams->self_src,
+              "        o << \"end arr, \";\n"
+              "    }\n"
+          ))
+        return IDL_RETCODE_NO_MEMORY;
+
+      if (putf(&streams->self_src,
+              "    else\n"
+              "        o << \"%s is null, \";\n",
+              name
           ))
         return IDL_RETCODE_NO_MEMORY;
     }

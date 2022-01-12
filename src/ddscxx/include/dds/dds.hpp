@@ -39,8 +39,6 @@
 
 #include <dds/core/QosProvider.hpp>
 
-#include <../ddscxx/org/eclipse/cyclonedds/core/OstreamWrap.hpp>
-
 #ifdef _WIN32
 #pragma warning ( pop )
 #pragma warning( push )
