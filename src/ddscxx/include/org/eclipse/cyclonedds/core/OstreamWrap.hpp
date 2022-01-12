@@ -1,11 +1,11 @@
+#ifndef CYCLONEDDS_CORE_OSTREAM_WRAP_HPP_
+#define CYCLONEDDS_CORE_OSTREAM_WRAP_HPP_
+
 #include <vector>
 #include <algorithm>
 #include <iterator>
 #include <iostream>
 #include <optional>
-
-#ifndef CYCLONE_WRAP_H_
-#define CYCLONE_WRAP_H_
 
 namespace org
 {
@@ -62,6 +62,4 @@ std::ostream &operator<< (std::ostream &os, const OstreamWrap<T> &x) {
 }
 }
 
-#endif
-
-
+#endif /* CYCLONEDDS_CORE_OSTREAM_WRAP_HPP_ */
