@@ -330,7 +330,6 @@ emit_struct(
   static const char *fmt2 = "std::ostream& operator << (std::ostream& o, const %s& sample);\n\n";
   if (idl_fprintf(gen->header.handle, fmt2, name) < 0)
     return IDL_RETCODE_NO_MEMORY;
-
   return IDL_RETCODE_OK;
 }
 
@@ -362,7 +361,6 @@ emit_enum(
     fmt = (value == skip) ? "%s%s" : "%s%s = %" PRIu32 "\n";
     if (idl_fprintf(gen->header.handle, fmt, sep, name, value) < 0)
       return IDL_RETCODE_NO_MEMORY;
-
     skip = value + 1;
     sep = ",\n  ";
   }
@@ -374,7 +372,6 @@ emit_enum(
   static const char *fmt2 = "std::ostream& operator << (std::ostream& o, const %s& sample);\n";
   if (idl_fprintf(gen->header.handle, fmt2, name) < 0)
     return IDL_RETCODE_NO_MEMORY;
-
   return IDL_VISIT_DONT_RECURSE;
 }
 

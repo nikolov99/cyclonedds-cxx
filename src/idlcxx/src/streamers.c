@@ -126,7 +126,7 @@ struct streams {
   idl_buffer_t move;
   idl_buffer_t max;
   idl_buffer_t props;
-  idl_buffer_t self_src;
+  idl_buffer_t ostream_src;
 };
 
 static void setup_streams(struct streams* str, struct generator* gen)
@@ -148,8 +148,8 @@ static void cleanup_streams(struct streams* str)
     free(str->max.data);
   if (str->props.data)
     free(str->props.data);
-  if (str->self_src.data)
-    free(str->self_src.data);
+  if (str->ostream_src.data)
+    free(str->ostream_src.data);
 }
 
 static idl_retcode_t flush_stream(idl_buffer_t* str, FILE* f)
@@ -1274,7 +1274,7 @@ emit_ostream_struct_members(
   bool bEnum = idl_is_enum(type_spec);
   // -----------------------
   if (bIsTemplate) {
-      if (putf(&streams->self_src,
+      if (putf(&streams->ostream_src,
               "//    %s: Template type is not supported yet.\n",
               name
           ))
@@ -1282,7 +1282,7 @@ emit_ostream_struct_members(
   }
   if (bOptional) {
     if (bIsSequence) {
-      if (putf(&streams->self_src,
+      if (putf(&streams->ostream_src,
           "    o << \"%s: \" << org::eclipse::cyclonedds::core::OstreamWrap(sample.%s().value());\n",
           name,
           name
@@ -1291,7 +1291,7 @@ emit_ostream_struct_members(
     }
     else
     if (bIsArray) {
-      if (putf(&streams->self_src,
+      if (putf(&streams->ostream_src,
           "    o << \"%s: \" << org::eclipse::cyclonedds::core::OstreamWrap(sample.%s().value());\n",
           name,
           name
@@ -1300,7 +1300,7 @@ emit_ostream_struct_members(
     }
     else
     {      
-      if (putf(&streams->self_src,
+      if (putf(&streams->ostream_src,
 
               "    if (sample.%s().has_value())\n"
               "        o << \"%s: \" << sample.%s().value() <<\", \";\n"
@@ -1316,7 +1316,7 @@ emit_ostream_struct_members(
   }
   else
   if (bEnum) {
-    if (putf(&streams->self_src,
+    if (putf(&streams->ostream_src,
             "    o << \"%s: \" << sample.%s() <<\", \";\n",
             name,
             name
@@ -1325,7 +1325,7 @@ emit_ostream_struct_members(
   }
   else
   if (bIsSequence) {
-      if (putf(&streams->self_src,
+      if (putf(&streams->ostream_src,
           "    o << \"%s: \" << org::eclipse::cyclonedds::core::OstreamWrap(sample.%s());\n",
           name,
           name
@@ -1334,7 +1334,7 @@ emit_ostream_struct_members(
   }
   else
   if (bIsArray) {
-      if (putf(&streams->self_src,
+      if (putf(&streams->ostream_src,
           "    o << \"%s: \" << org::eclipse::cyclonedds::core::OstreamWrap(sample.%s());\n",
           name,
           name
@@ -1343,7 +1343,7 @@ emit_ostream_struct_members(
   }
   else
   {
-    if (putf(&streams->self_src,
+    if (putf(&streams->ostream_src,
             "    o << \"%s: \" << sample.%s() <<\", \";\n",
             name,
             name
@@ -1355,28 +1355,28 @@ emit_ostream_struct_members(
   // ---------------------
 }
 
-int GetNumNameSpaces(const void* node) {
+int get_num_name_spaces(const void* node) {
   int nNumNameSpaces = 0;
   idl_node_t *nodeCurr = (idl_node_t*)node;
   do {
     if (nodeCurr->parent) {
       nodeCurr = nodeCurr->parent;
-
       nNumNameSpaces++;
     };
-    if (nNumNameSpaces>100)
-      break;
   }
   while (nodeCurr->parent);
   return nNumNameSpaces;
 }
 
 static idl_retcode_t
-PrintNameSpaces(
+print_name_spaces(
         const void* node,
         idl_buffer_t* idl_buffer,
         int nNumNameSpaces)
 {
+  if (!nNumNameSpaces)
+    return IDL_RETCODE_OK;
+
   size_t sizeArrNameSpace = (size_t)nNumNameSpaces * sizeof(char*);
   const char** pArrNameSpace = malloc(sizeArrNameSpace);
   memset(pArrNameSpace, 0, sizeArrNameSpace);
@@ -1404,10 +1404,13 @@ PrintNameSpaces(
 }
 
 static idl_retcode_t
-PrintNameSpacesClosed(
+print_name_spaces_closed(
         idl_buffer_t* idl_buffer,
         int nNumNameSpaces)
 {
+  if (!nNumNameSpaces)
+    return IDL_RETCODE_OK;
+
   for (int n=1; n<=(nNumNameSpaces); n++) {
     if (putf(idl_buffer,
           "}\n"))
@@ -1429,23 +1432,21 @@ print_entry_ostream_struct_members(
   memset(&visitor, 0, sizeof(visitor));
   visitor.visit = IDL_DECLARATOR;
 
-  int nNumNameSpaces = GetNumNameSpaces(node);
-  if (!nNumNameSpaces)
-    return IDL_RETCODE_NO_MEMORY;
+  int nNumNameSpaces = get_num_name_spaces(node);
  
-  if (PrintNameSpaces(
+  if (print_name_spaces(
         node,
-        &streams->self_src,
+        &streams->ostream_src,
         nNumNameSpaces)!=IDL_RETCODE_OK)
     return IDL_RETCODE_NO_MEMORY;
 
-  if (putf(&streams->self_src,
+  if (putf(&streams->ostream_src,
           "std::ostream& operator << (std::ostream& o, const %s& sample)\n"
           "{\n",
         fullname))
     return IDL_RETCODE_NO_MEMORY;
 
-  if (putf(&streams->self_src, "    o <<\"[\";\n"))
+  if (putf(&streams->ostream_src, "    o <<\"[\";\n"))
     return IDL_RETCODE_NO_MEMORY;
 
   void* user_data = streams;
@@ -1453,19 +1454,19 @@ print_entry_ostream_struct_members(
   if (_struct->members && (ret = idl_visit(pstate, _struct->members, &visitor, user_data)))
     return ret;
 
-  if (putf(&streams->self_src,
+  if (putf(&streams->ostream_src,
           "    o <<\"]\";\n"
           "    return o;\n"
           "}\n"
       ))
     return IDL_RETCODE_NO_MEMORY;
 
-   if (PrintNameSpacesClosed(
-        &streams->self_src,
+   if (print_name_spaces_closed(
+        &streams->ostream_src,
         nNumNameSpaces)!=IDL_RETCODE_OK)
     return IDL_RETCODE_NO_MEMORY;
  
-  if (putf(&streams->self_src,
+  if (putf(&streams->ostream_src,
         "\n",
         fullname))
     return IDL_RETCODE_NO_MEMORY;
@@ -1528,7 +1529,7 @@ process_struct(
   if (IDL_PRINTA(&fullname, get_cpp11_fully_scoped_name, node, streams->generator) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
-   if (revisit) {
+  if (revisit) {
     if (print_switchbox_close(user_data)
      || print_constructed_type_close(user_data, node)
      || print_entry_point_functions(streams, fullname))
@@ -1728,19 +1729,17 @@ ostream_support_enum(
   uint32_t value;
   const char *enum_name = NULL;
 
-  int nNumNameSpaces = GetNumNameSpaces(node);
-  if (!nNumNameSpaces)
-    return IDL_RETCODE_NO_MEMORY;
+  int nNumNameSpaces = get_num_name_spaces(node);
  
-  if (PrintNameSpaces(
+  if (print_name_spaces(
         node,
-        &str->self_src,
+        &str->ostream_src,
         nNumNameSpaces)!=IDL_RETCODE_OK)
     return IDL_RETCODE_NO_MEMORY;
 
   static const char *fmt2 = "std::ostream& operator << (std::ostream& o, const %s& sample)%s";
   if (putf(
-          &str->self_src,
+          &str->ostream_src,
           fmt2,
           fullname,
           " {\n"
@@ -1767,7 +1766,7 @@ ostream_support_enum(
       return IDL_RETCODE_ILLEGAL_EXPRESSION;
     already_encountered[n_already_encountered++] = value;
 
-    if (putf(&str->self_src, "    case %s::%s:\n"
+    if (putf(&str->ostream_src, "    case %s::%s:\n"
                           "    o << \"%s\";\n"
                           "    break;\n",
                           fullname, enum_name,
@@ -1776,19 +1775,19 @@ ostream_support_enum(
       return IDL_RETCODE_NO_MEMORY;
   }
 
-  if (putf(&str->self_src,
+  if (putf(&str->ostream_src,
           "    }\n"
           "    return o;\n"
           "}\n"
           ))
     return IDL_RETCODE_NO_MEMORY;
 
-  if (PrintNameSpacesClosed(
-        &str->self_src,
+  if (print_name_spaces_closed(
+        &str->ostream_src,
         nNumNameSpaces)!=IDL_RETCODE_OK)
     return IDL_RETCODE_NO_MEMORY;
 
-  if (putf(&str->self_src,
+  if (putf(&str->ostream_src,
         "\n",
         fullname))
     return IDL_RETCODE_NO_MEMORY;
@@ -1861,7 +1860,6 @@ process_enum(
   idl_retcode_t retCode = ostream_support_enum(str, node, fullname);
   if (retCode!=IDL_RETCODE_OK)
     return retCode;
-
   return IDL_RETCODE_OK;
 }
 
@@ -1911,8 +1909,7 @@ generate_streamers(const idl_pstate_t* pstate, struct generator *gen)
    || idl_fprintf(gen->impl.handle, "%s", fmt) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
-  flush_stream(&streams.self_src, gen->impl.handle);
-
+  flush_stream(&streams.ostream_src, gen->impl.handle);
   cleanup_streams(&streams);
 
   return IDL_RETCODE_OK;
